@@ -109,6 +109,9 @@ class LLMManager:
                 response = await self._call_nebius(
                     model, prompt, max_tokens, temperature, system_prompt
                 )
+            elif self.provider == "demo":
+                # Demo mode - returns mock responses for testing without API
+                response = await self._generate_demo_response(prompt, model_size)
             else:
                 # Fallback to local - not yet implemented
                 self.logger.error(
@@ -426,3 +429,104 @@ class LLMManager:
         )
 
         return changes
+
+    async def _generate_demo_response(self, prompt: str, model_size: str) -> str:
+        """
+        Generate demo/mock responses for testing without an API key
+
+        This allows testing the full application flow without incurring API costs
+        """
+        self.logger.notification(
+            f"Generating demo response (model_size: {model_size})",
+            "ai"
+        )
+
+        # Check what type of prompt this is based on content
+        prompt_lower = prompt.lower()
+
+        # Scene change detection
+        if "scene changes" in prompt_lower or "location_changed" in prompt_lower:
+            return json.dumps({
+                "location_changed": False,
+                "new_location": None,
+                "time_changed": False,
+                "new_time": None,
+                "characters_entered": [],
+                "characters_left": [],
+                "significant_event": None
+            })
+
+        # Character decision
+        if "character would realistically do" in prompt_lower or '"refuses":' in prompt_lower:
+            return json.dumps({
+                "action": "responds thoughtfully to the situation",
+                "dialogue": "I appreciate you sharing that with me.",
+                "emotion": "thoughtful",
+                "refuses": False,
+                "reason": "The character is engaged with the conversation and wants to continue the interaction."
+            })
+
+        # Relationship update
+        if "trust_change" in prompt_lower or "affection_change" in prompt_lower:
+            return json.dumps({
+                "trust_change": 0.05,
+                "affection_change": 0.03,
+                "familiarity_change": 0.02,
+                "reason": "Positive interaction that builds trust and connection."
+            })
+
+        # Story flags detection
+        if "story flags" in prompt_lower or '"flags":' in prompt_lower:
+            return json.dumps({
+                "flags": []
+            })
+
+        # Story generation (default for large model)
+        if model_size == "large" or "write the next part" in prompt_lower:
+            return self._generate_demo_story()
+
+        # Default response
+        return json.dumps({
+            "response": "Demo mode active",
+            "note": "This is a placeholder response for testing"
+        })
+
+    def _generate_demo_story(self) -> str:
+        """
+        Generate a demo story continuation
+
+        Provides realistic-looking story text for testing the UI
+        """
+        import random
+
+        responses = [
+            """The air between you feels charged with unspoken words. Your visitor shifts their weight slightly, a gesture you remember from countless conversations years ago.
+
+"I know I should have called," they say, their voice carrying a weight of regret. "I know I should have done a lot of things differently."
+
+You feel your heart rate quicken. Part of you wants to slam the door, to protect yourself from the hurt that their absence caused. But another part, the part that remembers late-night conversations and shared dreams, wants to hear what they have to say.
+
+The evening light casts long shadows across the floor, and somewhere in the distance, you can hear the sound of traffic. But in this moment, it feels like the world has shrunk to just this doorway, just this conversation that's been five years in the making.""",
+
+            """They take a tentative step forward, then stop, as if asking permission to enter your space once more.
+
+"I've thought about what to say to you every day since I left," they admit, running a hand through their hair in that familiar nervous gesture. "And now that I'm here, none of those words seem good enough."
+
+You notice the subtle changes in them - the way they carry themselves with more confidence, but also the tiredness around their eyes that suggests the journey hasn't been as smooth as it appeared from the outside.
+
+"Maybe we could talk?" they suggest hopefully. "Really talk. About everything. About what happened, about why I left, about..." they trail off, but their eyes convey what their words cannot.
+
+The weight of this moment settles on your shoulders. This is your choice to make.""",
+
+            """A long moment passes between you, filled with everything that was and everything that could be.
+
+Finally, they speak again, their voice softer now. "I brought something. It's silly, probably, but..." They reach into their pocket and pull out a small, worn object - something that immediately tugs at your memories.
+
+Your breath catches. It's the keychain you gave them years ago, the one with the small star charm. They kept it all this time.
+
+"I never stopped thinking about home," they say quietly. "About you. About all the things I should have said before I left."
+
+The evening breeze carries the scent of rain, and you realize that whatever you decide in this moment will change everything. Do you let the past stay buried, or do you open the door to possibilities you'd long ago given up on?"""
+        ]
+
+        return random.choice(responses)
