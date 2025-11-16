@@ -1,0 +1,186 @@
+{
+  "title": "The Moonweaver's Apprentice",
+  "description": "A fantasy story about discovering magical powers and learning to control them under the guidance of a mysterious mentor.",
+  "initial_message": "The letter arrived on the night of the full moon, just as Master Silvara had predicted.\n\nYou sit in your small room above the apothecary, the envelope trembling slightly in your hands. The seal is pressed with silver wax - a crescent moon wrapped in starlight. You've seen this symbol before, in the old books your grandmother used to show you before she passed. The symbol of the Moonweavers.\n\nYour heart pounds as you break the seal and unfold the parchment inside. The words seem to shimmer faintly in the moonlight streaming through your window.\n\n\"To the one who dreams of silver threads,\n\nYour power has awakened. The patterns you see in the moonlight, the way the shadows bend to your will - these are not imaginings. They are gifts, and dangerous ones if left untrained.\n\nI am Master Silvara of the Moonweaver's Guild. I have watched you from afar and seen your potential. If you wish to understand your abilities, to control them rather than be controlled by them, come to the old tower at the edge of Whisperwood at midnight.\n\nThe choice is yours. But know this - power untrained is power unleashed, and the consequences can be... severe.\n\nMay the moon guide your path.\"\n\nYou look out your window at the full moon hanging heavy in the sky. The old tower. You know the one - people say it's haunted, abandoned for decades. But now you wonder if that was ever true.\n\nThe clock strikes eleven. You have one hour to decide.",
+  "initial_location": "Your room above the apothecary",
+  "initial_time": "Night - one hour before midnight",
+
+  "characters": [
+    {
+      "name": "You",
+      "type": "User",
+      "appearance": "A young person with observant eyes that sometimes catch the light strangely",
+      "age": 19,
+      "backstory": "You've worked in the village apothecary since your parents passed away three years ago. Recently, strange things have been happening - you see patterns in moonlight that no one else sees, shadows seem to move at your touch. Your grandmother used to tell you stories of the Moonweavers, but you thought they were just tales.",
+      "personality_traits": ["curious", "cautious", "determined", "imaginative", "self-reliant"],
+      "speech_patterns": "Thoughtful and questioning, tends to observe before speaking"
+    },
+    {
+      "name": "Master Silvara",
+      "type": "Main",
+      "appearance": "Ageless appearance with silver-streaked dark hair, piercing gray eyes that seem to see through everything, and an ethereal grace to her movements.",
+      "age": null,
+      "backstory": "One of the last true Moonweavers, Silvara has spent centuries mastering the art of weaving moonlight and shadow. She's been searching for an apprentice worthy of the old ways, and she believes she's finally found one in you.",
+      "personality_traits": ["mysterious", "patient", "demanding", "wise", "secretive", "protective"],
+      "speech_patterns": "Speaks in measured tones, often uses metaphors and riddles, never gives straight answers when a lesson can be learned instead"
+    },
+    {
+      "name": "Finn",
+      "type": "Support",
+      "appearance": "Friendly face with freckles, messy auburn hair, always has dirt under his fingernails from his herbalist work.",
+      "age": 20,
+      "backstory": "Your best friend since childhood and fellow worker at the apothecary. He's noticed the strange things happening around you and is worried but supportive. Has no magical abilities but is resourceful and loyal.",
+      "personality_traits": ["loyal", "practical", "worried", "supportive", "clever"],
+      "speech_patterns": "Direct and down-to-earth, uses humor to cope with stress"
+    },
+    {
+      "name": "The Shadow",
+      "type": "Antagonist",
+      "appearance": "A dark presence that appears in reflections and dark corners, never fully visible but always watching.",
+      "age": null,
+      "backstory": "A manifestation of unchecked moonweaving power. It's drawn to you and your awakening abilities. Master Silvara warns that it represents what happens when power grows without discipline.",
+      "personality_traits": ["patient", "seductive", "dangerous", "ancient", "corrupting"],
+      "speech_patterns": "Whispers that seem to come from inside your own mind, tempting and persuasive"
+    },
+    {
+      "name": "Elder Thorne",
+      "type": "Support",
+      "appearance": "Elderly man with kind eyes, long gray beard, and weathered hands. Always wears his village council robes.",
+      "age": 75,
+      "backstory": "Head of the village council and keeper of old secrets. He knew your grandmother and knows more about the Moonweavers than he lets on. He's protective of the village but also of you.",
+      "personality_traits": ["wise", "cautious", "secretive", "protective", "traditional"],
+      "speech_patterns": "Speaks slowly and deliberately, chooses words carefully, often speaks in proverbs"
+    }
+  ],
+
+  "locations": [
+    {
+      "name": "Your room above the apothecary",
+      "description": "A small but cozy room filled with dried herbs hanging from the ceiling and old books your grandmother left you. The window faces east, perfect for moonrise.",
+      "type": "indoor",
+      "scope": "room"
+    },
+    {
+      "name": "The Old Tower",
+      "description": "An ancient stone tower at the edge of Whisperwood forest. Locals say it's haunted. At night, some claim to see silver light flickering from its highest window.",
+      "type": "indoor",
+      "scope": "building"
+    },
+    {
+      "name": "Whisperwood Forest",
+      "description": "An ancient forest where the trees seem to whisper secrets. On full moon nights, silver threads of light can be seen weaving between the branches if you know how to look.",
+      "type": "outdoor",
+      "scope": "region"
+    },
+    {
+      "name": "The Village Square",
+      "description": "The heart of your small village, where the old well stands. During the day it's bustling, at night it's peaceful under the moonlight.",
+      "type": "outdoor",
+      "scope": "neighborhood"
+    },
+    {
+      "name": "The Apothecary",
+      "description": "Where you work, filled with jars of herbs and remedies. The basement is said to have been used for more... unusual purposes in the old days.",
+      "type": "indoor",
+      "scope": "building"
+    }
+  ],
+
+  "relationships": [
+    {
+      "entity1": "You",
+      "entity2": "Master Silvara",
+      "type": "potential mentor and student",
+      "first_meeting": "Have not met yet - only received her letter",
+      "trust": 0.3,
+      "affection": 0.2,
+      "familiarity": 0.1,
+      "history": "You've only just received her letter. She claims to have been watching you. You're intrigued but cautious."
+    },
+    {
+      "entity1": "You",
+      "entity2": "Finn",
+      "type": "best friends",
+      "first_meeting": "Met as children in the village",
+      "trust": 0.95,
+      "affection": 0.85,
+      "familiarity": 0.95,
+      "history": "Childhood friends who've been through everything together. He's the only one you've told about the strange things happening to you."
+    },
+    {
+      "entity1": "You",
+      "entity2": "Elder Thorne",
+      "type": "respected village elder",
+      "first_meeting": "Known him your whole life, he was friends with your grandmother",
+      "trust": 0.7,
+      "affection": 0.5,
+      "familiarity": 0.6,
+      "history": "He's always looked out for you since your parents died. Sometimes you catch him watching you with an odd expression, as if he knows something he's not saying."
+    },
+    {
+      "entity1": "You",
+      "entity2": "The Shadow",
+      "type": "unknown threat",
+      "first_meeting": "Have glimpsed it in mirrors and dark corners recently",
+      "trust": 0.0,
+      "affection": 0.0,
+      "familiarity": 0.2,
+      "history": "A dark presence that's been appearing more frequently as your powers awaken. It whispers tempting things."
+    }
+  ],
+
+  "story_arcs": [
+    {
+      "name": "The Awakening",
+      "description": "Your powers have awakened and you must decide whether to seek training.",
+      "order": 1,
+      "is_active": 1,
+      "start_condition": {},
+      "completion_condition": {
+        "flags": ["met_master_silvara", "training_decision_made"]
+      },
+      "episodes": [
+        {
+          "name": "The Letter",
+          "description": "Receive and respond to Master Silvara's invitation",
+          "order": 1,
+          "trigger_flags": [],
+          "completion_flags": ["decided_about_tower"]
+        },
+        {
+          "name": "The Tower at Midnight",
+          "description": "First meeting with Master Silvara",
+          "order": 2,
+          "trigger_flags": ["decided_to_go_to_tower"],
+          "completion_flags": ["met_master_silvara"]
+        }
+      ]
+    },
+    {
+      "name": "The First Lessons",
+      "description": "Learning the basics of moonweaving under Silvara's guidance.",
+      "order": 2,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["training_decision_made", "agreed_to_train"]
+      },
+      "completion_condition": {
+        "flags": ["first_spell_mastered"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "The Shadow's Temptation",
+      "description": "The Shadow grows stronger as your powers develop, offering shortcuts and power.",
+      "order": 3,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["first_spell_mastered"]
+      },
+      "completion_condition": {
+        "flags": ["shadow_confronted"]
+      },
+      "episodes": []
+    }
+  ]
+}

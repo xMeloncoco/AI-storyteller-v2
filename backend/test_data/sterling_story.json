@@ -1,0 +1,155 @@
+{
+  "title": "Sterling Hearts",
+  "description": "A romance drama about reunited childhood friends navigating complicated feelings and past wounds.",
+  "initial_message": "The doorbell rings. Your heart skips a beat as you realize who it must be. After five long years, Alex Sterling is finally standing on your doorstep. You take a deep breath, smoothing down your shirt, and reach for the door handle. Through the frosted glass, you can see his familiar silhouette - taller now, broader. The Alex you remember was a gangly teenager with a bright smile. The man waiting outside is something else entirely.\n\nYou open the door.\n\nThere he stands, looking both completely different and exactly the same. His dark hair is neatly styled now, and he's dressed in an expensive-looking coat. But those warm brown eyes - they haven't changed at all. They crinkle at the corners as he offers you a tentative smile.\n\n\"Hey,\" he says softly, his voice deeper than you remember. \"It's been a while.\"",
+  "initial_location": "Your apartment - Living Room",
+  "initial_time": "Early evening",
+
+  "characters": [
+    {
+      "name": "You",
+      "type": "User",
+      "appearance": "A person in their mid-twenties",
+      "age": 25,
+      "backstory": "You grew up in a small town with Alex as your best friend. Five years ago, he left for college and never looked back, leaving you behind with unspoken feelings and unanswered questions. You've built a life for yourself in the city, but you've never quite gotten over the way things ended between you two.",
+      "personality_traits": ["thoughtful", "guarded", "creative", "loyal", "introspective"],
+      "speech_patterns": "Speaks carefully, sometimes hesitant to express deeper feelings"
+    },
+    {
+      "name": "Alex Sterling",
+      "type": "Main",
+      "appearance": "Tall with dark hair, warm brown eyes, and an easy smile. Well-dressed in a way that suggests success but not arrogance.",
+      "age": 26,
+      "backstory": "Alex was the golden boy of your hometown - smart, charming, destined for great things. He left for college on a full scholarship and built a successful career in business consulting. But success came at a cost - he lost touch with everyone from his past, including his best friend. He's back now because he realized what he lost.",
+      "personality_traits": ["charming", "ambitious", "regretful", "loyal", "emotionally guarded", "sincere"],
+      "speech_patterns": "Speaks confidently but with underlying hesitation when discussing emotional topics. Uses humor to deflect when uncomfortable."
+    },
+    {
+      "name": "Maya Chen",
+      "type": "Support",
+      "appearance": "Petite with long black hair often in a ponytail, expressive dark eyes, and an infectious laugh.",
+      "age": 25,
+      "backstory": "Your roommate and best friend since college. She's been there through all your Alex drama and is protective of you. She's skeptical of Alex's return but wants you to be happy.",
+      "personality_traits": ["protective", "honest", "supportive", "sarcastic", "perceptive"],
+      "speech_patterns": "Direct and no-nonsense, uses sarcasm affectionately, always speaks her mind"
+    },
+    {
+      "name": "Jordan Blake",
+      "type": "Support",
+      "appearance": "Athletic build, friendly face with dimples, casual dresser.",
+      "age": 27,
+      "backstory": "A coworker who's been showing romantic interest in you. Genuinely nice person but represents the safe, predictable choice.",
+      "personality_traits": ["friendly", "reliable", "straightforward", "patient", "optimistic"],
+      "speech_patterns": "Warm and encouraging, sometimes overly positive"
+    }
+  ],
+
+  "locations": [
+    {
+      "name": "Your apartment - Living Room",
+      "description": "A cozy but small living space filled with books and art prints. A worn but comfortable couch faces a window overlooking the city. Personal touches everywhere show this is a space you've made your own.",
+      "type": "indoor",
+      "scope": "room"
+    },
+    {
+      "name": "The Coffee Corner",
+      "description": "A quiet coffee shop where you and Alex used to hang out as teenagers. It's been updated but retains its warm, nostalgic atmosphere.",
+      "type": "indoor",
+      "scope": "building"
+    },
+    {
+      "name": "Riverside Park",
+      "description": "A peaceful park along the river where you and Alex shared many late-night conversations as teenagers. The old bench under the willow tree is still there.",
+      "type": "outdoor",
+      "scope": "neighborhood"
+    }
+  ],
+
+  "relationships": [
+    {
+      "entity1": "You",
+      "entity2": "Alex Sterling",
+      "type": "childhood friends with complicated feelings",
+      "first_meeting": "Met as children in elementary school, became inseparable best friends",
+      "trust": 0.4,
+      "affection": 0.6,
+      "familiarity": 0.7,
+      "history": "Were best friends throughout childhood and teenage years. Had unspoken romantic feelings. Alex left for college and lost touch, causing deep hurt. Now reconnecting after 5 years."
+    },
+    {
+      "entity1": "You",
+      "entity2": "Maya Chen",
+      "type": "close friends and roommates",
+      "first_meeting": "Met in college, became fast friends",
+      "trust": 0.9,
+      "affection": 0.8,
+      "familiarity": 0.9,
+      "history": "Best friends since college, roommates for 3 years. Maya knows all about the Alex situation and is protective."
+    },
+    {
+      "entity1": "You",
+      "entity2": "Jordan Blake",
+      "type": "coworker with romantic potential",
+      "first_meeting": "Met at work about a year ago",
+      "trust": 0.7,
+      "affection": 0.5,
+      "familiarity": 0.5,
+      "history": "Friendly coworker relationship that has been slowly developing into something more. Jordan has been clear about their interest."
+    }
+  ],
+
+  "story_arcs": [
+    {
+      "name": "The Return",
+      "description": "Alex has returned and wants to reconnect. You must decide how to handle his reappearance.",
+      "order": 1,
+      "is_active": 1,
+      "start_condition": {},
+      "completion_condition": {
+        "flags": ["first_real_conversation_with_alex"]
+      },
+      "episodes": [
+        {
+          "name": "The Doorstep",
+          "description": "First meeting after 5 years",
+          "order": 1,
+          "trigger_flags": [],
+          "completion_flags": ["alex_entered_apartment"]
+        },
+        {
+          "name": "Breaking the Ice",
+          "description": "First real conversation about what happened",
+          "order": 2,
+          "trigger_flags": ["alex_entered_apartment"],
+          "completion_flags": ["discussed_the_past"]
+        }
+      ]
+    },
+    {
+      "name": "Old Wounds",
+      "description": "Confronting the hurt from Alex's departure and the silence that followed.",
+      "order": 2,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["first_real_conversation_with_alex"]
+      },
+      "completion_condition": {
+        "flags": ["alex_apologized", "you_expressed_hurt"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "New Possibilities",
+      "description": "Deciding what kind of relationship you want with Alex now.",
+      "order": 3,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["alex_apologized", "you_expressed_hurt"]
+      },
+      "completion_condition": {
+        "flags": ["relationship_decision_made"]
+      },
+      "episodes": []
+    }
+  ]
+}

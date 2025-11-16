@@ -1,0 +1,28 @@
+# Dreamwalkers Backend Dependencies
+# Core Framework
+fastapi>=0.104.0,<1.0.0
+uvicorn[standard]>=0.24.0,<1.0.0
+
+# Database
+sqlalchemy>=2.0.0,<3.0.0
+aiosqlite>=0.19.0,<1.0.0
+
+# Data Validation
+pydantic>=2.5.0,<3.0.0
+pydantic-settings>=2.0.0,<3.0.0
+
+# File Upload Support
+python-multipart>=0.0.6,<1.0.0
+
+# Vector Database for Memory
+chromadb>=0.4.18,<1.0.0
+
+# AI/LLM Integration
+# Using httpx for API calls (OpenRouter, Nebius, etc.)
+httpx>=0.25.0,<1.0.0
+
+# Environment Variables
+python-dotenv>=1.0.0,<2.0.0
+
+# Date/Time Handling
+python-dateutil>=2.8.0,<3.0.0

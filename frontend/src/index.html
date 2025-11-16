@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:8000; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+    <title>Dreamwalkers - AI Storytelling</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Main Application Container -->
+    <div id="app">
+        <!-- Header -->
+        <header id="header">
+            <div class="header-left">
+                <h1>Dreamwalkers</h1>
+                <span id="connection-status" class="status-indicator">Connecting...</span>
+            </div>
+            <div class="header-right">
+                <button id="btn-logs" class="header-btn">View Logs</button>
+                <button id="btn-settings" class="header-btn">Settings</button>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main id="main-content">
+            <!-- Story Selection Screen -->
+            <div id="screen-stories" class="screen active">
+                <h2>Choose Your Story</h2>
+                <div id="stories-list" class="stories-grid">
+                    <!-- Stories will be loaded here dynamically -->
+                    <p class="loading">Loading stories...</p>
+                </div>
+            </div>
+
+            <!-- Playthrough Selection Screen -->
+            <div id="screen-playthroughs" class="screen">
+                <div class="screen-header">
+                    <button id="btn-back-to-stories" class="back-btn">Back to Stories</button>
+                    <h2 id="selected-story-title">Story Title</h2>
+                </div>
+                <div id="playthroughs-list" class="playthroughs-container">
+                    <!-- Playthroughs will be loaded here -->
+                </div>
+                <button id="btn-new-playthrough" class="primary-btn">Start New Playthrough</button>
+            </div>
+
+            <!-- Chat/Story Screen -->
+            <div id="screen-chat" class="screen">
+                <div class="chat-header">
+                    <button id="btn-back-to-playthroughs" class="back-btn">Back</button>
+                    <div class="chat-info">
+                        <h2 id="playthrough-title">Playthrough</h2>
+                        <span id="current-location">Location: Unknown</span>
+                    </div>
+                    <button id="btn-show-characters" class="info-btn">Characters</button>
+                </div>
+
+                <!-- Chat Messages Container -->
+                <div id="chat-container">
+                    <div id="chat-messages">
+                        <!-- Messages will appear here -->
+                    </div>
+                </div>
+
+                <!-- Chat Input Area -->
+                <div id="chat-input-area">
+                    <textarea id="user-input" placeholder="Describe your action or dialogue..." rows="3"></textarea>
+                    <div class="chat-actions">
+                        <button id="btn-send" class="primary-btn">Send</button>
+                        <button id="btn-generate-more" class="secondary-btn">Generate More</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Screen -->
+            <div id="screen-logs" class="screen">
+                <div class="screen-header">
+                    <button id="btn-close-logs" class="back-btn">Close Logs</button>
+                    <h2>System Logs</h2>
+                </div>
+                <div class="logs-controls">
+                    <select id="log-type-filter">
+                        <option value="">All Types</option>
+                        <option value="notification">Notifications</option>
+                        <option value="error">Errors</option>
+                        <option value="edit">Database Edits</option>
+                        <option value="ai_decision">AI Decisions</option>
+                        <option value="context">Context</option>
+                    </select>
+                    <select id="log-category-filter">
+                        <option value="">All Categories</option>
+                        <option value="system">System</option>
+                        <option value="database">Database</option>
+                        <option value="ai">AI</option>
+                        <option value="memory">Memory</option>
+                        <option value="character">Character</option>
+                        <option value="story">Story</option>
+                    </select>
+                    <button id="btn-refresh-logs" class="secondary-btn">Refresh</button>
+                </div>
+                <div id="logs-container">
+                    <!-- Logs will be displayed here -->
+                </div>
+            </div>
+
+            <!-- Settings Screen -->
+            <div id="screen-settings" class="screen">
+                <div class="screen-header">
+                    <button id="btn-close-settings" class="back-btn">Close</button>
+                    <h2>Settings</h2>
+                </div>
+                <div class="settings-container">
+                    <div class="setting-group">
+                        <h3>Display Settings</h3>
+                        <label>
+                            <input type="checkbox" id="setting-show-relationships" checked>
+                            Show Relationship Stats
+                        </label>
+                        <label>
+                            <input type="checkbox" id="setting-show-flags">
+                            Show Story Flags (Debug)
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <h3>API Settings</h3>
+                        <label>
+                            Backend URL:
+                            <input type="text" id="setting-api-url" value="http://localhost:8000">
+                        </label>
+                    </div>
+                    <div class="setting-group">
+                        <h3>System Info</h3>
+                        <div id="system-info">
+                            <p>Checking connection...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Characters Info Modal -->
+            <div id="modal-characters" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Characters in Scene</h2>
+                        <button id="btn-close-characters" class="close-btn">X</button>
+                    </div>
+                    <div id="characters-info">
+                        <!-- Character information will be displayed here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Playthrough Modal -->
+            <div id="modal-new-playthrough" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2>Start New Playthrough</h2>
+                        <button id="btn-close-new-playthrough" class="close-btn">X</button>
+                    </div>
+                    <div class="modal-body">
+                        <label>
+                            Playthrough Name:
+                            <input type="text" id="new-playthrough-name" placeholder="My Adventure">
+                        </label>
+                        <button id="btn-create-playthrough" class="primary-btn">Create</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer id="footer">
+            <span id="footer-status">Ready</span>
+            <span id="footer-version">v0.1.0</span>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="api.js"></script>
+    <script src="components/chat.js"></script>
+    <script src="components/logs.js"></script>
+    <script src="components/settings.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
