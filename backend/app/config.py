@@ -24,8 +24,8 @@ class Settings(BaseSettings):
     chroma_path: str = "./data/chroma"
 
     # AI Provider Configuration
-    # Options: "openrouter", "nebius", "local" (for Ollama)
-    ai_provider: str = "openrouter"
+    # Options: "openrouter", "nebius", "local" (for Ollama), "demo" (for testing without API)
+    ai_provider: str = "demo"
 
     # OpenRouter Settings
     openrouter_api_key: Optional[str] = None
