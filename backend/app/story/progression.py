@@ -119,6 +119,16 @@ class StoryProgressionManager:
         - Conflicts started/resolved
         - Relationship milestones
         """
+        self.logger.ai_decision(
+            "Analyzing interaction for story flags",
+            "story",
+            {
+                "user_message": user_message[:200],
+                "response_preview": ai_response[:200],
+                "num_character_decisions": len(character_decisions)
+            }
+        )
+
         # Build context for analysis
         decisions_summary = ""
         for decision in character_decisions:
@@ -136,9 +146,24 @@ Character reactions:
 Story response: {ai_response[:500]}
 """
 
+        self.logger.context(
+            "Built interaction context for flag analysis",
+            "story",
+            {
+                "interaction_text": interaction_text,
+                "characters_involved": [d.get("character_name") for d in character_decisions]
+            }
+        )
+
         # Get current flags for context
         current_flags = crud.get_story_flags(self.db, self.playthrough_id)
         current_flag_names = [f.flag_name for f in current_flags]
+
+        self.logger.context(
+            f"Current story flags ({len(current_flag_names)} total)",
+            "story",
+            {"existing_flags": current_flag_names}
+        )
 
         # Use AI to detect important events
         llm_manager = LLMManager(self.db, None)
@@ -173,6 +198,15 @@ If no important events occurred, return an empty list.
 
 JSON Response:"""
 
+        self.logger.context(
+            "FULL STORY FLAG ANALYSIS PROMPT",
+            "ai",
+            {
+                "prompt_length": len(prompt),
+                "prompt_preview": prompt[:2000] + "..." if len(prompt) > 2000 else prompt
+            }
+        )
+
         try:
             response = await llm_manager.generate_text(
                 prompt,
@@ -180,8 +214,25 @@ JSON Response:"""
                 temperature=0.3
             )
 
+            self.logger.ai_decision(
+                "AI story flag analysis response",
+                "ai",
+                {
+                    "raw_response": response
+                }
+            )
+
             result = json.loads(response)
             flags = result.get("flags", [])
+
+            self.logger.ai_decision(
+                f"Parsed story flags from AI response",
+                "story",
+                {
+                    "flags_detected": flags,
+                    "num_flags": len(flags)
+                }
+            )
 
             # Filter out flags that are already set
             new_flags = [
@@ -189,12 +240,25 @@ JSON Response:"""
                 if f.get("name") not in current_flag_names
             ]
 
+            if new_flags:
+                self.logger.notification(
+                    f"New story flags to set: {len(new_flags)}",
+                    "story",
+                    {"new_flags": new_flags}
+                )
+            else:
+                self.logger.notification(
+                    "No new story flags detected in this interaction",
+                    "story"
+                )
+
             return new_flags
 
         except json.JSONDecodeError:
             self.logger.error(
                 "Failed to parse story flag analysis",
-                "story"
+                "story",
+                {"raw_response": response if 'response' in locals() else "No response"}
             )
             return []
         except Exception as e:
