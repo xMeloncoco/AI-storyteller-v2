@@ -260,6 +260,10 @@ async function checkConnection() {
             statusIndicator.textContent = 'Connected';
             statusIndicator.className = 'status-indicator connected';
             AppState.isConnected = true;
+        } else if (health.status === 'unhealthy') {
+            statusIndicator.textContent = 'Unhealthy';
+            statusIndicator.className = 'status-indicator disconnected';
+            AppState.isConnected = false;
         } else {
             statusIndicator.textContent = 'Degraded';
             statusIndicator.className = 'status-indicator';
