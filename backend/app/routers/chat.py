@@ -60,9 +60,13 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Session not found")
 
     logger.notification(
-        f"Received user message",
+        f"=== STARTING CHAT PROCESSING ===",
         "system",
-        {"message_length": len(request.message), "message_preview": request.message[:100]}
+        {
+            "session_id": request.session_id,
+            "playthrough_id": session.playthrough_id,
+            "user_message": request.message
+        }
     )
 
     # Step 2: Save user message to database
@@ -77,16 +81,47 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
         )
     )
 
+    logger.notification(
+        f"User message saved to database",
+        "database",
+        {"conversation_id": user_conversation.id}
+    )
+
     # Step 3: Build context
+    logger.context(
+        "Building full context for AI...",
+        "memory"
+    )
+
     context_builder = ContextBuilder(db, request.session_id)
     full_context = context_builder.build_full_context()
 
+    logger.context(
+        "FULL CONTEXT BUILT",
+        "memory",
+        {
+            "context_length": len(full_context),
+            "context_preview": full_context[:1000] + "..." if len(full_context) > 1000 else full_context
+        }
+    )
+
     # Step 4: Detect scene changes (lightweight model)
+    logger.ai_decision(
+        "Analyzing user input for scene changes...",
+        "ai"
+    )
+
     llm_manager = LLMManager(db, request.session_id)
 
     scene_changes = await llm_manager.detect_scene_changes(
         full_context,
         request.message
+    )
+
+    logger.ai_decision(
+        "Scene change analysis complete",
+        "ai",
+        scene_changes
     )
 
     # Apply scene changes if detected
@@ -97,7 +132,7 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
         )
 
         logger.notification(
-            "Scene changed",
+            "Scene changed - updating state",
             "story",
             {
                 "new_location": scene_changes.get("new_location"),
@@ -107,12 +142,36 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
 
     # Step 5: Get character decisions (Phase 1.3/2.1)
     characters_in_scene = context_builder.get_all_characters_in_scene_info()
+
+    logger.context(
+        f"Characters in scene: {len(characters_in_scene)}",
+        "character",
+        {
+            "characters": [c.get("name", "Unknown") for c in characters_in_scene]
+        }
+    )
+
     character_decisions = []
 
     for char_info in characters_in_scene:
         # Skip user character - they don't make AI decisions
         if char_info.get("type") == "User":
+            logger.notification(
+                f"Skipping user character: {char_info.get('name')}",
+                "character"
+            )
             continue
+
+        logger.ai_decision(
+            f"Analyzing what {char_info.get('name')} would do...",
+            "character",
+            {
+                "character_name": char_info.get("name"),
+                "character_type": char_info.get("type"),
+                "personality": char_info.get("personality_traits"),
+                "user_action": request.message
+            }
+        )
 
         decision = await llm_manager.analyze_character_decision(
             char_info,
@@ -123,14 +182,45 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
         decision["character_id"] = char_info.get("id")
         character_decisions.append(decision)
 
+        logger.ai_decision(
+            f"CHARACTER DECISION: {char_info.get('name')}",
+            "character",
+            {
+                "character": char_info.get("name"),
+                "action": decision.get("action"),
+                "dialogue": decision.get("dialogue"),
+                "emotion": decision.get("emotion"),
+                "refuses_user": decision.get("refuses"),
+                "reasoning": decision.get("reason")
+            }
+        )
+
     # Step 6: Generate story response (large model)
     story_info = context_builder.get_story_info()
+
+    logger.ai_decision(
+        "Building story generation prompt...",
+        "ai",
+        {
+            "story_title": story_info.get("title"),
+            "num_character_decisions": len(character_decisions)
+        }
+    )
 
     story_prompt = PromptTemplates.story_generation_prompt(
         full_context,
         request.message,
         character_decisions,
         story_info
+    )
+
+    logger.context(
+        "FULL STORY PROMPT (what AI sees)",
+        "ai",
+        {
+            "prompt_length": len(story_prompt),
+            "prompt_content": story_prompt[:2000] + "..." if len(story_prompt) > 2000 else story_prompt
+        }
     )
 
     # System prompt for story generation
@@ -142,6 +232,12 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
 5. Maintains story continuity
 6. Is appropriate for the story's tone"""
 
+    logger.ai_decision(
+        "Sending prompt to AI for story generation...",
+        "ai",
+        {"model_size": "large", "system_prompt_length": len(system_prompt)}
+    )
+
     generated_response = await llm_manager.generate_text(
         story_prompt,
         model_size="large",
@@ -149,9 +245,12 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
     )
 
     logger.ai_decision(
-        "Generated story response",
+        "AI GENERATED RESPONSE",
         "ai",
-        {"response_length": len(generated_response), "preview": generated_response[:200]}
+        {
+            "response_length": len(generated_response),
+            "full_response": generated_response
+        }
     )
 
     # Step 7: Save AI response to database

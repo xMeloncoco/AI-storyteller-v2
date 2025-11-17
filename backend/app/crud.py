@@ -629,14 +629,14 @@ def get_logs(
 
     return query.order_by(desc(models.Log.timestamp)).offset(
         filter_params.offset
-    ).limit(filter_params.limit).all()[::-1]
+    ).limit(filter_params.limit).all()
 
 
 def get_all_logs(db: Session, limit: int = 100) -> List[models.Log]:
     """Get all logs (most recent first)"""
     return db.query(models.Log).order_by(
         desc(models.Log.timestamp)
-    ).limit(limit).all()[::-1]
+    ).limit(limit).all()
 
 
 # =============================================================================

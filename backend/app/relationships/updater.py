@@ -149,6 +149,19 @@ class RelationshipUpdater:
         - Affection
         - Familiarity
         """
+        self.logger.context(
+            f"Analyzing relationship change: {user_name} <-> {character_name}",
+            "character",
+            {
+                "user": user_name,
+                "character": character_name,
+                "current_trust": relationship.trust,
+                "current_affection": relationship.affection,
+                "current_familiarity": relationship.familiarity,
+                "relationship_type": relationship.relationship_type
+            }
+        )
+
         # Build the interaction summary
         interaction_summary = f"""
 User ({user_name}) said/did: {user_message}
@@ -161,6 +174,16 @@ User ({user_name}) said/did: {user_message}
 
 Story response excerpt: {ai_response[:500]}...
 """
+
+        self.logger.ai_decision(
+            f"Building relationship analysis prompt for {character_name}",
+            "character",
+            {
+                "interaction_summary": interaction_summary,
+                "character_emotion": character_decision.get('emotion'),
+                "character_refused": character_decision.get('refuses', False)
+            }
+        )
 
         # Get current relationship state
         current_rel = {
@@ -180,11 +203,29 @@ Story response excerpt: {ai_response[:500]}...
             interaction_summary
         )
 
+        self.logger.context(
+            f"FULL RELATIONSHIP PROMPT for {character_name}",
+            "ai",
+            {
+                "prompt_length": len(prompt),
+                "prompt_content": prompt[:1500] + "..." if len(prompt) > 1500 else prompt
+            }
+        )
+
         try:
             response = await llm_manager.generate_text(
                 prompt,
                 model_size="small",
                 temperature=0.3  # More deterministic
+            )
+
+            self.logger.ai_decision(
+                f"AI relationship analysis response for {character_name}",
+                "ai",
+                {
+                    "raw_response": response,
+                    "character": character_name
+                }
             )
 
             # Parse the response
