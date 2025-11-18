@@ -68,21 +68,33 @@ CHARACTER DECISIONS (what each character has decided to do):
 USER ACTION:
 {user_action}
 
-INSTRUCTIONS:
-1. Write the next part of the story as a third-person narrative
-2. Include both narration and character dialogue
-3. Follow the character decisions above - characters should act as they decided
-4. If a character refuses the user's action, make this clear in the narrative
-5. Maintain consistency with established character personalities
-6. Keep the story engaging and immersive
-7. Do not break the fourth wall
-8. Write 2-4 paragraphs of narrative
+CRITICAL RULES - READ CAREFULLY:
+1. The user is playing as a character in the story - you NEVER control their character
+2. NEVER write dialogue, thoughts, or actions for the user's character
+3. ONLY write about NPCs (non-player characters) and the environment
+4. Keep your response to 2-4 short paragraphs MAXIMUM - be concise!
+5. Focus on how NPCs react to what the user did/said
 
-IMPORTANT:
-- Characters are NOT controlled by the user - they have their own will
-- If a character would refuse or react negatively, show this realistically
-- Dialogue should match each character's speech patterns
-- Show emotions through actions and expressions, not just telling
+WHAT TO WRITE:
+- NPC reactions, dialogue, and actions
+- Environmental descriptions
+- What the user sees/hears happening around them
+- How NPCs feel (shown through body language, not internal thoughts)
+
+WHAT NOT TO WRITE:
+- What the user character says (they already said it!)
+- What the user character thinks or feels
+- What the user character does next
+- Long descriptive passages (keep it brief!)
+
+STYLE GUIDELINES:
+- Write in third-person perspective
+- Show NPC emotions through actions and expressions, not just stating them
+- Match each character's speech patterns and personality
+- If a character refuses the user's action, show this through their response
+- Keep the pacing tight - no unnecessary details
+
+LENGTH: 2-4 SHORT PARAGRAPHS. Not more. This is important.
 
 Write the next part of the story:"""
 
@@ -337,13 +349,20 @@ LAST NARRATIVE:
 CHARACTERS IN SCENE:
 {char_list}
 
+CRITICAL RULES:
+- The user is playing as one of the characters - NEVER control their character
+- NEVER write dialogue, thoughts, or actions for the user's character
+- ONLY write about NPCs and the environment
+- Keep it to 2-3 SHORT paragraphs maximum
+
 INSTRUCTIONS:
 1. Continue the story naturally from where it left off
-2. Have characters interact with each other or react to the situation
-3. Move the story forward slightly
-4. Leave room for user interaction (don't resolve everything)
+2. Have NPCs interact with each other or react to the situation
+3. Move the story forward slightly (but don't resolve major conflicts)
+4. Leave room for user interaction - don't make big decisions for them
 5. Maintain character personalities and story consistency
-6. Write 1-2 paragraphs
+
+LENGTH: 2-3 SHORT PARAGRAPHS. Be concise!
 
 Continue the story:"""
 
