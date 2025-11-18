@@ -394,8 +394,9 @@ body {
     padding: 15px;
     height: calc(100vh - 280px);
     overflow-y: auto;
-    font-family: 'Courier New', monospace;
-    font-size: 0.9em;
+    font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.95em;
+    line-height: 1.6;
 }
 
 .log-entry {
@@ -626,4 +627,162 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
     background: #4b5563;
+}
+
+/* =============================================================================
+   TESTER SCREEN STYLES
+   ============================================================================= */
+
+.tester-container {
+    display: flex;
+    gap: 20px;
+    height: calc(100vh - 200px);
+}
+
+.tester-sidebar {
+    width: 250px;
+    background-color: #0f172a;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.tester-content {
+    flex: 1;
+    background-color: #0f172a;
+    border-radius: 8px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.tester-view-btn,
+.tester-nav-btn {
+    background-color: #1e293b;
+    color: #e0e0e0;
+    border: 1px solid #334155;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+}
+
+.tester-view-btn:hover,
+.tester-nav-btn:hover {
+    background-color: #334155;
+}
+
+.tester-view-btn.active,
+.tester-nav-btn.active {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.tester-data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 15px;
+}
+
+.tester-data-card {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.tester-data-card h4 {
+    margin: 0 0 10px 0;
+    color: #60a5fa;
+    font-size: 1.1em;
+}
+
+.tester-data-card p {
+    margin: 8px 0;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.tester-data-card strong {
+    color: #93c5fd;
+}
+
+.char-type {
+    font-size: 0.85em;
+    color: #9ca3af;
+    font-weight: normal;
+}
+
+.relationship-metrics {
+    display: flex;
+    gap: 15px;
+    margin: 10px 0;
+    font-size: 0.9em;
+}
+
+.relationship-metrics span {
+    padding: 4px 8px;
+    background-color: #0f172a;
+    border-radius: 3px;
+}
+
+.tester-flags-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.tester-flags-section h4 {
+    color: #60a5fa;
+    margin-bottom: 10px;
+}
+
+.tester-flags-list {
+    list-style: none;
+    padding: 0;
+}
+
+.tester-flags-list li {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.tester-scene-container {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.tester-scene-container h4 {
+    color: #60a5fa;
+    margin-top: 0;
+}
+
+.tester-context-container {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.tester-context-container h4 {
+    color: #60a5fa;
+    margin-top: 0;
+}
+
+.context-display {
+    background-color: #0d1117;
+    border: 1px solid #374151;
+    border-radius: 4px;
+    padding: 15px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.9em;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }

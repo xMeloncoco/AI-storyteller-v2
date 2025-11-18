@@ -305,6 +305,16 @@ document.addEventListener('DOMContentLoaded', () => {
         SettingsComponent.loadTestDataList();
     });
 
+    document.getElementById('btn-tester').addEventListener('click', () => {
+        // Need an active playthrough to use tester
+        if (AppState.currentPlaythrough) {
+            showScreen('tester');
+            TesterComponent.init(AppState.currentPlaythrough, AppState.currentSession);
+        } else {
+            alert('Please select a playthrough first before using the Tester.');
+        }
+    });
+
     // Story screen
     document.getElementById('btn-back-to-stories').addEventListener('click', () => {
         showScreen('stories');
@@ -394,6 +404,54 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-clear-testdata').addEventListener('click', () => {
         SettingsComponent.clearAllTestData();
+    });
+
+    // Tester screen
+    document.getElementById('btn-close-tester').addEventListener('click', () => {
+        if (AppState.currentSession) {
+            showScreen('chat');
+        } else {
+            showScreen('playthroughs');
+        }
+    });
+
+    // Tester view switching
+    document.getElementById('btn-tester-view-database').addEventListener('click', () => {
+        TesterComponent.switchView('database');
+    });
+
+    document.getElementById('btn-tester-view-context').addEventListener('click', () => {
+        TesterComponent.switchView('context');
+    });
+
+    // Tester database navigation
+    document.getElementById('btn-tester-characters').addEventListener('click', () => {
+        TesterComponent.showDataView('characters');
+    });
+
+    document.getElementById('btn-tester-relationships').addEventListener('click', () => {
+        TesterComponent.showDataView('relationships');
+    });
+
+    document.getElementById('btn-tester-locations').addEventListener('click', () => {
+        TesterComponent.showDataView('locations');
+    });
+
+    document.getElementById('btn-tester-arcs').addEventListener('click', () => {
+        TesterComponent.showDataView('arcs');
+    });
+
+    document.getElementById('btn-tester-flags').addEventListener('click', () => {
+        TesterComponent.showDataView('flags');
+    });
+
+    document.getElementById('btn-tester-scene').addEventListener('click', () => {
+        TesterComponent.showDataView('scene');
+    });
+
+    // Tester reset button
+    document.getElementById('btn-tester-reset').addEventListener('click', () => {
+        TesterComponent.resetCurrentPlaythrough();
     });
 
     // Modals
