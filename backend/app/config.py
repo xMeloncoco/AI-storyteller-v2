@@ -25,24 +25,29 @@ class Settings(BaseSettings):
 
     # AI Provider Configuration
     # Options: "openrouter", "nebius", "local" (for Ollama), "demo" (for testing without API)
+    # IMPORTANT: Set to "demo" for testing without AI, or "openrouter"/"nebius" with API key
     ai_provider: str = "demo"
 
-    # OpenRouter Settings
+    # OpenRouter Settings (FREE tier available!)
+    # Get free API key from https://openrouter.ai/
     openrouter_api_key: Optional[str] = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
 
-    # Nebius Settings (alternative provider)
+    # Nebius Settings (alternative provider with free credits)
+    # Get API key from https://studio.nebius.ai/
     nebius_api_key: Optional[str] = None
     nebius_base_url: str = "https://api.studio.nebius.ai/v1"
 
-    # Local Ollama Settings
+    # Local Ollama Settings (for future offline support)
     ollama_host: str = "http://localhost:11434"
 
     # Model Configuration
     # Small model: Used for quick analysis tasks (character decisions, event detection)
-    small_model: str = "meta-llama/llama-3.2-3b-instruct"
+    # For FREE OpenRouter: add :free suffix to model name!
+    small_model: str = "meta-llama/llama-3.2-3b-instruct:free"
     # Large model: Used for story generation
-    large_model: str = "meta-llama/llama-3.1-8b-instruct"
+    # For FREE OpenRouter: add :free suffix to model name!
+    large_model: str = "meta-llama/llama-3.1-8b-instruct:free"
 
     # Application Settings
     log_level: str = "INFO"

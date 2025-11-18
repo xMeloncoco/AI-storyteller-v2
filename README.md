@@ -1,271 +1,256 @@
-# Dreamwalkers - AI Interactive Storytelling Application
+# 🌟 Dreamwalkers - AI Interactive Storytelling App
 
-A complete AI-powered interactive storytelling application where characters have their own personalities, relationships evolve naturally, and stories progress through structured arcs.
+An AI-powered interactive storytelling desktop application where users experience immersive narratives with intelligent characters, evolving relationships, and dynamic story progression.
 
-## Features
+## ✨ Features
 
-- **Interactive AI Storytelling**: Chat with AI-driven narratives that respond to your actions
-- **Character Consistency**: Characters make autonomous decisions based on their personalities
-- **Dynamic Relationships**: Trust, affection, and familiarity evolve through interactions
-- **Story Progression**: Track story arcs, episodes, and important events
-- **Comprehensive Logging**: Full visibility into what the AI is thinking and doing
-- **Generate More**: Continue stories without user input
-- **Session Resume**: Save and continue your stories
-- **Multiple AI Providers**: Support for OpenRouter, Nebius, or local models
+### Core Functionality
+- **AI-Powered Narratives**: Chat with intelligent AI characters that remember context and respond consistently
+- **Character Depth**: Each character has detailed personality, values, fears, speech patterns, and secrets
+- **Dynamic Relationships**: Relationships evolve based on interactions (trust, affection, familiarity metrics)
+- **Story Progression**: Structured story arcs with conditions and progression tracking
+- **Context Awareness**: AI remembers conversation history and story state
+- **Multiple Stories**: Load different story templates and create multiple playthroughs
 
-## Project Structure
+### Developer/Testing Tools
+- **🧪 Tester/Debugger**: Complete database viewer and context window inspector
+  - Browse characters, relationships, locations, story arcs, and flags
+  - View the exact context sent to the AI
+  - Reset playthroughs for fresh testing
+- **📊 Comprehensive Logging**: Track all AI decisions and system operations
+- **💾 Test Data Loader**: Load story templates with one click
+- **🎮 Database Management**: View and reset playthrough data easily
 
-```
-dreamwalkers/
-├── backend/                 # FastAPI Python backend
-│   ├── app/
-│   │   ├── ai/             # AI integration (LLM, prompts, context)
-│   │   ├── relationships/   # Relationship tracking
-│   │   ├── story/          # Story progression management
-│   │   ├── routers/        # API endpoints
-│   │   ├── utils/          # Logging and helpers
-│   │   ├── models.py       # Database models
-│   │   ├── schemas.py      # API validation
-│   │   ├── crud.py         # Database operations
-│   │   └── main.py         # Application entry point
-│   ├── test_data/          # Test stories and import scripts
-│   └── data/               # Database and ChromaDB storage
-├── frontend/               # Electron desktop application
-│   └── src/
-│       ├── components/     # UI components (chat, logs, settings)
-│       ├── api.js          # Backend communication
-│       └── renderer.js     # Main frontend logic
-└── docs/                   # Additional documentation
-```
-
-## Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
-
 - Python 3.11+
 - Node.js 18+
-- An AI API key (OpenRouter or Nebius) OR local Ollama installation
+- Free AI API key (see [AI_SETUP.md](./AI_SETUP.md))
 
-### 1. Backend Setup
+### Installation
 
+1. **Clone and setup backend:**
 ```bash
-# Navigate to backend
 cd backend
-
-# Create virtual environment
 python -m venv venv
-
-# Activate (Windows)
-venv\Scripts\activate
-# Activate (Mac/Linux)
-source venv/bin/activate
-
-# Install dependencies
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-
-# Create .env file from example
-cp .env.example .env
-# Edit .env with your API key
 ```
 
-Configure your `.env` file:
-```env
-AI_PROVIDER=openrouter
-OPENROUTER_API_KEY=your_key_here
-SMALL_MODEL=meta-llama/llama-3.2-3b-instruct
-LARGE_MODEL=meta-llama/llama-3.1-8b-instruct
-```
-
-### 2. Import Test Data
-
+2. **Configure AI provider:**
+Create `backend/.env` file:
 ```bash
-# Import both test stories
-python test_data/import_test_data.py --story both --create-playthroughs
-
-# Or reset and reimport
-python test_data/import_test_data.py --story both --reset --create-playthroughs
+AI_PROVIDER=openrouter  # or nebius
+OPENROUTER_API_KEY=your_free_api_key_here
 ```
 
-### 3. Start Backend
-
+3. **Install frontend:**
 ```bash
-# From backend directory
-uvicorn app.main:app --reload
-```
-
-The API will be available at `http://localhost:8000`
-
-### 4. Frontend Setup
-
-```bash
-# Navigate to frontend
-cd frontend
-
-# Install dependencies
+cd ../frontend
 npm install
+```
 
-# Start application
+### Running the App
+
+**Terminal 1 - Backend:**
+```bash
+cd backend
+source venv/bin/activate
+python -m app.main
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd frontend
 npm start
 ```
 
-## Test Stories Included
+The app will open automatically. Backend runs on `http://localhost:8000`.
 
-### Sterling Hearts
-A romance drama about reunited childhood friends navigating complicated feelings and past wounds.
+## 📖 Using the App
 
-- Characters: You, Alex Sterling (main love interest), Maya Chen (best friend), Jordan Blake (potential rival)
-- Themes: Reconnection, trust, forgiveness, choice
+### First Time Setup
+1. **Load Test Data**: Click Settings → Load All Test Data
+2. **Select a Story**: Go to Stories screen, choose "Starling Contract"
+3. **Create Playthrough**: Click "New Playthrough", name it
+4. **Start Chatting**: Type messages and interact with characters!
 
-### The Moonweaver's Apprentice
-A fantasy story about discovering magical powers and learning to control them.
+### Tester/Debugger (🧪 Button)
+- **Database Viewer**: Browse all playthrough data
+  - Characters: View personalities, traits, secrets
+  - Relationships: Check trust/affection metrics
+  - Story Arcs: Track progression
+  - Flags: See what's been triggered
+- **Context Window**: See exactly what the AI sees
+- **Reset**: Start playthrough fresh for testing
 
-- Characters: You, Master Silvara (mentor), Finn (best friend), The Shadow (antagonist), Elder Thorne (village elder)
-- Themes: Power, responsibility, temptation, growth
+## 🏗️ Project Structure
 
-## Key API Endpoints
+```
+AI-storyteller-v2/
+├── backend/
+│   ├── app/
+│   │   ├── ai/              # AI integration (LLM, context building)
+│   │   ├── routers/         # API endpoints (chat, stories, admin, logs)
+│   │   ├── models.py        # Database models
+│   │   ├── schemas.py       # Pydantic validation
+│   │   ├── crud.py          # Database operations
+│   │   └── config.py        # Configuration
+│   ├── test_data/           # Story template JSON files
+│   └── data/                # Database and vector store
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # UI components (chat, tester, settings)
+│   │   ├── api.js           # Backend API client
+│   │   ├── renderer.js      # Main app logic
+│   │   └── styles.css       # Styling
+│   └── main.js              # Electron entry point
+└── AI_SETUP.md              # AI provider setup guide
+```
+
+## 🎮 Creating Stories
+
+Stories are defined in JSON format. See `backend/test_data/TEMPLATE_story.json` for a comprehensive template with documentation.
+
+### Basic Story Structure
+```json
+{
+  "title": "Your Story Name",
+  "description": "Brief description",
+  "initial_message": "Opening narration...",
+  "characters": [...],
+  "relationships": [...],
+  "locations": [...],
+  "story_arcs": [...]
+}
+```
+
+### Loading Stories
+1. Create JSON file in `backend/test_data/`
+2. Open Settings → Test Data Management
+3. Click "Refresh List" → "Load All Test Data"
+
+## 🔧 Configuration
+
+Edit `backend/.env`:
+
+```bash
+# AI Provider (openrouter, nebius, or demo)
+AI_PROVIDER=openrouter
+
+# API Keys
+OPENROUTER_API_KEY=your_key
+NEBIUS_API_KEY=your_key
+
+# Models (free options recommended)
+SMALL_MODEL=meta-llama/llama-3.2-3b-instruct:free
+LARGE_MODEL=meta-llama/llama-3.1-8b-instruct:free
+
+# Database
+DATABASE_URL=sqlite:///./data/dreamwalkers.db
+
+# Context Settings
+MAX_CONTEXT_MESSAGES=20
+MAX_TOKENS_SMALL=500
+MAX_TOKENS_LARGE=2000
+```
+
+## 🌐 API Endpoints
+
+### Stories & Playthroughs
+- `GET /stories/` - List all stories
+- `POST /stories/playthroughs` - Create new playthrough
+- `GET /stories/{id}/playthroughs` - List playthroughs for a story
 
 ### Chat
 - `POST /chat/send` - Send message and get AI response
-- `POST /chat/generate-more` - Continue story without user input
-- `GET /chat/history/{session_id}` - Get conversation history
+- `POST /chat/generate-more` - Generate story without user input
 
-### Stories
-- `GET /stories/` - List all stories
-- `POST /stories/playthroughs` - Create new playthrough
-- `GET /stories/playthroughs/{id}/characters` - Get characters
+### Admin/Testing
+- `POST /admin/test-data/load` - Load test data files
+- `GET /admin/tester/playthrough/{id}` - Get complete playthrough data
+- `GET /admin/tester/context/{session_id}` - View context window
+- `DELETE /admin/tester/playthrough/{id}/reset` - Reset playthrough
 
 ### Logs
-- `GET /logs/` - View system logs with filtering
-- `GET /logs/ai-decisions` - See AI decision-making
-- `GET /logs/errors` - View errors only
+- `GET /logs` - View system logs
+- `GET /admin/tester/logs/{session_id}` - Get grouped logs
 
-## Architecture
+## 🧩 Key Technologies
 
-### AI Workflow
-1. User sends action/dialogue
-2. Lightweight model detects scene changes
-3. Character Decision Layer asks: "What would this character do?"
-4. Main LLM generates story response
-5. Relationship values update based on interaction
-6. Story flags are set if important events occur
-7. Response returned to user with metadata
+- **Backend**: FastAPI (Python), SQLAlchemy, Pydantic
+- **Frontend**: Electron, JavaScript, HTML/CSS
+- **Database**: SQLite
+- **AI**: OpenRouter / Nebius (free tiers available)
+- **Architecture**: REST API, Client-Server
 
-### Database Schema Pattern
-- Templates: `playthrough_id = NULL` (story-level data)
-- Instances: `playthrough_id = <value>` (playthrough-specific data)
+## 🎯 Development Roadmap
 
-When you create a playthrough, all templates are copied to instances.
+### ✅ Completed
+- [x] Core chat system with AI integration
+- [x] Character and relationship tracking
+- [x] Story arc progression
+- [x] Database viewer and tester tools
+- [x] Test data loading system
+- [x] Context window tracking
+- [x] Comprehensive logging
 
-## Configuration
+### 🚧 Future Features
+- [ ] ChromaDB vector memory for long-term context
+- [ ] Character decision validation
+- [ ] Relationship update triggers
+- [ ] Story flag automation
+- [ ] Memory summarization
+- [ ] User character customization
+- [ ] Visual novel mode
+- [ ] Story creation UI
 
-### AI Provider Options
-
-**OpenRouter** (default):
-```env
-AI_PROVIDER=openrouter
-OPENROUTER_API_KEY=your_key
-```
-
-**Nebius**:
-```env
-AI_PROVIDER=nebius
-NEBIUS_API_KEY=your_key
-```
-
-**Local Ollama** (future):
-```env
-AI_PROVIDER=local
-OLLAMA_HOST=http://localhost:11434
-SMALL_MODEL=phi3:mini
-LARGE_MODEL=llama3.1:8b-instruct-q4_0
-```
-
-### Context Settings
-```env
-MAX_CONTEXT_MESSAGES=20      # How many messages in context
-MEMORY_SAVE_INTERVAL=5       # Auto-save memory every N responses
-```
-
-## Logging System
-
-The logging system is critical for understanding what's happening:
-
-- **notification**: Normal system events
-- **error**: Problems that occurred
-- **edit**: Database changes (relationships, flags)
-- **ai_decision**: What the AI decided and why
-- **context**: Memory and context operations
-
-View logs through the frontend "View Logs" button or via API.
-
-## Development Notes
-
-### Adding New Stories
-1. Create a JSON file in `backend/test_data/`
-2. Follow the structure of `sterling_story.json`
-3. Include characters, locations, relationships, and story arcs
-4. Import using the import script
-
-### Extending Character Behavior
-- Modify prompts in `backend/app/ai/prompts.py`
-- Adjust character decision logic in `backend/app/ai/llm_manager.py`
-- Update relationship calculations in `backend/app/relationships/updater.py`
-
-### Adding New Features
-- Most features can be added by:
-  1. Adding new database models in `models.py`
-  2. Creating schemas in `schemas.py`
-  3. Adding CRUD operations in `crud.py`
-  4. Creating API endpoints in routers
-  5. Updating frontend components
-
-## Future Features (Not Implemented Yet)
-
-- ChromaDB vector memory (placeholder exists)
-- Character knowledge tracking (prevent mind-reading)
-- Story coherence checking
-- User character customization
-- Multiple AI model support simultaneously
-- Mobile version
-- Visual enhancements
-- Secret/hidden character data
-
-## Troubleshooting
+## 🐛 Troubleshooting
 
 ### Backend won't start
-- Check Python version: `python --version`
-- Verify virtual environment is activated
-- Check all dependencies installed: `pip install -r requirements.txt`
-- Verify .env file exists and has valid API key
-
-### AI responses are errors
-- Check API key is valid
-- Verify model names are correct for your provider
-- Check logs for specific error messages
-- Ensure backend is running at http://localhost:8000
+- Check Python version: `python --version` (need 3.11+)
+- Verify venv is activated
+- Install requirements: `pip install -r requirements.txt`
 
 ### Frontend won't connect
-- Verify backend is running
-- Check API URL in settings matches backend
-- Look at browser dev tools console for errors
+- Ensure backend is running first
+- Check Settings → API URL is `http://localhost:8000`
+- Look for errors in browser console (F12)
 
-### Database issues
-- Reset database: `POST /reset-database`
-- Reimport data with `--reset` flag
-- Check `backend/data/` directory exists
+### AI not responding
+- Verify `.env` file has correct AI_PROVIDER and API key
+- Check Settings → System Info → AI Configured should be "Yes"
+- See [AI_SETUP.md](./AI_SETUP.md) for free API keys
 
-## License
+### No stories available
+- Go to Settings → Test Data Management
+- Click "Load All Test Data"
+- Refresh Stories screen
 
-MIT License - See LICENSE file for details.
+## 📚 Documentation
 
-## Contributing
+- **AI_SETUP.md** - How to get free AI API keys and configure providers
+- **backend/test_data/TEMPLATE_story.json** - Story creation template with full documentation
+- **backend/app/models.py** - Database schema documentation
+- **backend/app/PIPELINE_STAGES.md** - AI processing pipeline explanation
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with clear comments
-4. Test thoroughly
-5. Submit a pull request
+## 🤝 Contributing
+
+This is a personal project, but suggestions and feedback are welcome!
+
+## 📄 License
+
+MIT License - Feel free to use and modify for your own projects.
+
+## 🎉 Acknowledgments
+
+Built with:
+- FastAPI for the incredible async Python framework
+- Electron for cross-platform desktop apps
+- OpenRouter & Nebius for free AI model access
+- The open-source AI community
 
 ---
 
-**Happy Storytelling!**
+**Ready to create amazing stories? See [AI_SETUP.md](./AI_SETUP.md) to get started!** 🚀
