@@ -47,7 +47,8 @@ class Settings(BaseSettings):
     small_model: str = "meta-llama/llama-3.2-3b-instruct:free"
     # Large model: Used for story generation
     # For FREE OpenRouter: add :free suffix to model name!
-    large_model: str = "meta-llama/llama-3.1-8b-instruct:free"
+    # Updated: Gemma 2 9B is currently available and works well for story generation
+    large_model: str = "google/gemma-2-9b-it:free"
 
     # Application Settings
     log_level: str = "INFO"
