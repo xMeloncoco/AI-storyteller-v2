@@ -218,6 +218,12 @@ const SettingsComponent = {
             // Refresh the test data list
             await this.loadTestDataList();
 
+            // Refresh the stories list if the loadStories function is available
+            if (typeof loadStories === 'function') {
+                console.log('Refreshing stories list after loading test data...');
+                await loadStories();
+            }
+
         } catch (error) {
             statusContainer.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
         } finally {
@@ -254,6 +260,12 @@ const SettingsComponent = {
 
             // Refresh the test data list
             await this.loadTestDataList();
+
+            // Refresh the stories list if the loadStories function is available
+            if (typeof loadStories === 'function') {
+                console.log('Refreshing stories list after clearing test data...');
+                await loadStories();
+            }
 
         } catch (error) {
             statusContainer.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
