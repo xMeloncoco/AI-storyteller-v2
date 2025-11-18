@@ -499,8 +499,8 @@ class MemoryFlag(Base):
     importance = Column(Integer, default=5)
 
     __table_args__ = (
-        Index("idx_memory_playthrough", "playthrough_id"),
-        Index("idx_memory_importance", "importance"),
+        Index("idx_memory_flag_playthrough", "playthrough_id"),
+        Index("idx_memory_flag_importance", "importance"),
     )
 
 
