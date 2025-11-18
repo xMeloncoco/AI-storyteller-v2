@@ -1,0 +1,196 @@
+{
+  "_comment": "STORY TEMPLATE - Use this as a reference for creating new stories",
+  "_instructions": [
+    "Copy this file and fill in your story details",
+    "Remove all fields starting with _ before loading",
+    "Required fields: title, description, initial_message, characters (at least one User type)",
+    "All other fields are optional but recommended for rich storytelling",
+    "Character types: User (player), Main (primary NPCs), Support (secondary), Antagonist, Cameo, NPC",
+    "playthrough_id will be NULL for templates (automatically handled by loader)"
+  ],
+
+  "title": "Your Story Title",
+  "description": "A brief description of your story (1-3 sentences). This appears in the story selection screen.",
+  "initial_message": "The opening narration that sets the scene and draws the player into your story. This should be evocative, set the tone, and end at a decision point or interesting moment. Can be several paragraphs long.",
+  "initial_location": "Starting Location Name",
+  "initial_time": "Starting time (e.g., 'Early morning', 'Midnight', 'Spring afternoon')",
+
+  "characters": [
+    {
+      "_comment": "USER CHARACTER - Required! The player character",
+      "name": "You",
+      "type": "User",
+      "appearance": "Brief physical description (can be vague to allow player imagination)",
+      "age": 25,
+      "backstory": "Player character's background, motivations, current situation. Sets the context for why they're in this story.",
+      "personality_traits": ["trait1", "trait2", "trait3", "trait4"],
+      "speech_patterns": "How this character speaks (formal, casual, etc.)",
+
+      "_enhanced_fields_comment": "Optional but recommended for depth",
+      "core_values": ["value1", "value2"],
+      "core_fears": ["fear1", "fear2"],
+      "would_never_do": ["action1", "action2"],
+      "would_always_do": ["action1", "action2"],
+      "comfort_behaviors": ["behavior1", "behavior2"],
+      "verbal_patterns": {
+        "greetings": ["Hi", "Hello"],
+        "agreement": ["Yes", "Alright"],
+        "disagreement": ["No", "I don't think so"],
+        "exclamations": ["Wow", "Oh no"],
+        "fillers": ["um", "like"],
+        "avoids": ["words they wouldn't use"]
+      },
+      "sentence_structure": "Description of how they construct sentences",
+      "common_phrases": ["phrase they often use", "another phrase"],
+      "decision_style": "How they make decisions (analytical, impulsive, emotional, etc.)",
+      "internal_contradiction": "A way they contradict themselves (makes them human)",
+      "secret_kept": "Something they hide from others",
+      "vulnerability": "Their deepest weakness or fear"
+    },
+    {
+      "_comment": "MAIN CHARACTER EXAMPLE - Primary NPCs",
+      "name": "Character Name",
+      "type": "Main",
+      "appearance": "Detailed physical description",
+      "age": 28,
+      "backstory": "Detailed background and how they relate to the story",
+      "personality_traits": ["charming", "mysterious", "loyal", "complex"],
+      "speech_patterns": "Distinctive way of speaking",
+      "core_values": ["loyalty", "freedom"],
+      "core_fears": ["betrayal", "confinement"],
+      "would_never_do": ["harm innocents", "break a promise"],
+      "would_always_do": ["protect friends", "seek truth"],
+      "comfort_behaviors": ["paces when thinking", "touches necklace"],
+      "verbal_patterns": {
+        "greetings": ["Well met", "Good day"],
+        "agreement": ["Indeed", "Precisely"],
+        "disagreement": ["I must differ", "That's not quite right"]
+      },
+      "sentence_structure": "formal with occasional contractions",
+      "common_phrases": ["mark my words", "as fate would have it"],
+      "decision_style": "thoughtful but decisive",
+      "internal_contradiction": "Preaches honesty but hides their past",
+      "secret_kept": "Their true identity/past/motivation",
+      "vulnerability": "What could break them emotionally"
+    },
+    {
+      "_comment": "SUPPORT CHARACTER EXAMPLE - Secondary recurring characters",
+      "name": "Support Character",
+      "type": "Support",
+      "appearance": "Physical description",
+      "age": 30,
+      "backstory": "Background relevant to their role in the story",
+      "personality_traits": ["helpful", "witty", "reliable"],
+      "speech_patterns": "How they speak",
+      "_note": "Support characters can have fewer enhanced fields if they're less central"
+    },
+    {
+      "_comment": "ANTAGONIST EXAMPLE - Opposition characters",
+      "name": "Antagonist Name",
+      "type": "Antagonist",
+      "appearance": "Physical description emphasizing threatening or opposing qualities",
+      "age": 45,
+      "backstory": "What made them an antagonist, their motivations",
+      "personality_traits": ["ruthless", "intelligent", "patient"],
+      "speech_patterns": "How they speak (often measured, threatening, or manipulative)",
+      "_note": "Good antagonists have clear motivations, not just evil for evil's sake"
+    }
+  ],
+
+  "locations": [
+    {
+      "_comment": "Locations where scenes can take place",
+      "name": "Location Name - Specific Area",
+      "description": "Vivid description that sets the atmosphere and details. Help the AI paint the scene.",
+      "type": "indoor or outdoor",
+      "scope": "room, building, neighborhood, district, city, region"
+    },
+    {
+      "name": "Another Location",
+      "description": "Each location should have sensory details and emotional atmosphere",
+      "type": "outdoor",
+      "scope": "landmark",
+      "_parent_example": "For hierarchical locations, you could add parent_location_id after it's in the database"
+    }
+  ],
+
+  "relationships": [
+    {
+      "_comment": "Define how characters know each other - critical for realistic interactions",
+      "entity1": "Character Name 1",
+      "entity2": "Character Name 2",
+      "type": "Brief description of relationship",
+      "first_meeting": "When and how they met",
+      "trust": 0.5,
+      "_trust_range": "0.0 (complete distrust) to 1.0 (absolute trust)",
+      "affection": 0.5,
+      "_affection_range": "0.0 (hate/dislike) to 1.0 (love/deep affection)",
+      "familiarity": 0.5,
+      "_familiarity_range": "0.0 (strangers) to 1.0 (know everything about each other)",
+      "history": "Summary of their history together, key events that shaped the relationship"
+    },
+    {
+      "_example": "Childhood friends reunited",
+      "entity1": "You",
+      "entity2": "Main Character",
+      "type": "old friends with unresolved tension",
+      "first_meeting": "Met as children in school",
+      "trust": 0.6,
+      "affection": 0.7,
+      "familiarity": 0.8,
+      "history": "Were best friends as kids, lost touch for 10 years, recently reconnected. Still comfortable with each other but much has changed."
+    }
+  ],
+
+  "story_arcs": [
+    {
+      "_comment": "Story arcs structure the narrative progression",
+      "name": "Arc Name",
+      "description": "What this arc is about, what character development or plot progression happens",
+      "order": 1,
+      "_order_note": "Lower numbers happen first",
+      "is_active": 1,
+      "_is_active_note": "1 = active at story start, 0 = inactive until conditions met",
+      "start_condition": {},
+      "_start_condition_note": "Empty {} means active from start. Otherwise: {\"flags\": [\"flag_name\"]}",
+      "completion_condition": {
+        "flags": ["flag_that_completes_this_arc"]
+      },
+      "_completion_note": "What story flags indicate this arc is complete",
+      "episodes": [
+        {
+          "_comment": "Optional: Break arcs into smaller episodes",
+          "name": "Episode Name",
+          "description": "What happens in this episode",
+          "order": 1,
+          "trigger_flags": [],
+          "_trigger_note": "Flags needed to start this episode",
+          "completion_flags": ["flag_name"],
+          "_completion_flags_note": "Flags set when episode completes"
+        }
+      ]
+    },
+    {
+      "name": "Second Arc",
+      "description": "Builds on the first arc",
+      "order": 2,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["flag_from_previous_arc"]
+      },
+      "completion_condition": {
+        "flags": ["second_arc_complete"]
+      },
+      "episodes": []
+    }
+  ],
+
+  "_additional_notes": {
+    "character_depth": "The enhanced character fields (core_values, fears, contradictions, etc.) help the AI create more consistent and realistic characters",
+    "relationships": "Define ALL important relationships, even antagonistic ones. This helps the AI understand character dynamics",
+    "story_flags": "Story flags are set during play to track progress. Name them clearly (e.g., 'met_main_character', 'discovered_secret', 'completed_quest')",
+    "locations": "More locations give the AI more places to move the story. Include atmosphere and sensory details",
+    "balancing_scope": "You don't need to define everything. The AI can create minor NPCs and locations on the fly. Focus on what's important to your story",
+    "testing": "Start with a simple version and add detail as you test. You can always enhance later"
+  }
+}

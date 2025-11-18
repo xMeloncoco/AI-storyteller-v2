@@ -161,6 +161,29 @@ body {
     background-color: #4b5563;
 }
 
+.secondary-btn:disabled {
+    background-color: #1f2937;
+    cursor: not-allowed;
+}
+
+.danger-btn {
+    background-color: #7f1d1d;
+    color: #e0e0e0;
+    border: 1px solid #991b1b;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.danger-btn:hover {
+    background-color: #991b1b;
+}
+
+.danger-btn:disabled {
+    background-color: #450a0a;
+    cursor: not-allowed;
+}
+
 .info-btn {
     background-color: #0f3460;
     color: #e0e0e0;

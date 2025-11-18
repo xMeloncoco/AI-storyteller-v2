@@ -305,5 +305,41 @@ async function getLogStats() {
     return apiRequest('/logs/stats');
 }
 
+// =============================================================================
+// Admin - Test Data Management
+// =============================================================================
+
+/**
+ * Get available test data files
+ * @returns {Promise<Object>} Available test data files
+ */
+async function getAvailableTestData() {
+    return apiRequest('/admin/test-data/available');
+}
+
+/**
+ * Load test data from files
+ * @param {string} filename - Optional specific filename to load
+ * @param {boolean} loadAll - Load all available test data
+ * @returns {Promise<Object>} Load result
+ */
+async function loadTestData(filename = null, loadAll = false) {
+    let endpoint = '/admin/test-data/load?';
+    if (filename) {
+        endpoint += `filename=${encodeURIComponent(filename)}`;
+    } else if (loadAll) {
+        endpoint += 'load_all=true';
+    }
+    return apiRequest(endpoint, { method: 'POST' });
+}
+
+/**
+ * Clear all template data (stories without playthroughs)
+ * @returns {Promise<Object>} Clear result
+ */
+async function clearTestData() {
+    return apiRequest('/admin/test-data/clear', { method: 'DELETE' });
+}
+
 // Export all functions for use in other modules
 console.log('API client loaded');
