@@ -341,5 +341,46 @@ async function clearTestData() {
     return apiRequest('/admin/test-data/clear', { method: 'DELETE' });
 }
 
+// =============================================================================
+// Tester / Debug Functions
+// =============================================================================
+
+/**
+ * Get complete playthrough data for testing/debugging
+ * @param {number} playthroughId - Playthrough ID
+ * @returns {Promise<Object>} Complete playthrough data
+ */
+async function getPlaythroughData(playthroughId) {
+    return apiRequest(`/admin/tester/playthrough/${playthroughId}`);
+}
+
+/**
+ * Get current context window for a session
+ * @param {number} sessionId - Session ID
+ * @returns {Promise<Object>} Context window data
+ */
+async function getContextWindow(sessionId) {
+    return apiRequest(`/admin/tester/context/${sessionId}`);
+}
+
+/**
+ * Reset a playthrough to initial state
+ * @param {number} playthroughId - Playthrough ID
+ * @returns {Promise<Object>} Reset result
+ */
+async function resetPlaythrough(playthroughId) {
+    return apiRequest(`/admin/tester/playthrough/${playthroughId}/reset`, { method: 'DELETE' });
+}
+
+/**
+ * Get logs grouped by conversation turn
+ * @param {number} sessionId - Session ID
+ * @param {number} limit - Number of logs to retrieve
+ * @returns {Promise<Object>} Grouped logs
+ */
+async function getGroupedLogs(sessionId, limit = 50) {
+    return apiRequest(`/admin/tester/logs/${sessionId}?limit=${limit}`);
+}
+
 // Export all functions for use in other modules
 console.log('API client loaded');

@@ -17,6 +17,7 @@
                 <span id="connection-status" class="status-indicator">Connecting...</span>
             </div>
             <div class="header-right">
+                <button id="btn-tester" class="header-btn">🧪 Tester</button>
                 <button id="btn-logs" class="header-btn">View Logs</button>
                 <button id="btn-settings" class="header-btn">Settings</button>
             </div>
@@ -151,6 +152,49 @@
                 </div>
             </div>
 
+            <!-- Tester Screen -->
+            <div id="screen-tester" class="screen">
+                <div class="screen-header">
+                    <button id="btn-close-tester" class="back-btn">Close</button>
+                    <h2>🧪 Tester & Debugger</h2>
+                </div>
+                <div class="tester-container">
+                    <div class="tester-sidebar">
+                        <div id="tester-playthrough-info" style="margin-bottom: 20px;">
+                            <p>Select a playthrough first</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-direction: column;">
+                            <button id="btn-tester-view-database" class="tester-view-btn active">Database</button>
+                            <button id="btn-tester-view-context" class="tester-view-btn">Context Window</button>
+                        </div>
+                        <div id="tester-database-nav" style="display: flex; flex-direction: column; gap: 8px;">
+                            <button id="btn-tester-characters" class="tester-nav-btn active">Characters</button>
+                            <button id="btn-tester-relationships" class="tester-nav-btn">Relationships</button>
+                            <button id="btn-tester-locations" class="tester-nav-btn">Locations</button>
+                            <button id="btn-tester-arcs" class="tester-nav-btn">Story Arcs</button>
+                            <button id="btn-tester-flags" class="tester-nav-btn">Flags</button>
+                            <button id="btn-tester-scene" class="tester-nav-btn">Current Scene</button>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <button id="btn-tester-reset" class="danger-btn" style="width: 100%;">Reset Playthrough</button>
+                            <div id="tester-reset-status" style="margin-top: 10px;"></div>
+                        </div>
+                    </div>
+                    <div class="tester-content">
+                        <div id="tester-database-container">
+                            <div id="tester-database-view">
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                        <div id="tester-context-container" style="display: none;">
+                            <div id="tester-context-view">
+                                <p>Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Characters Info Modal -->
             <div id="modal-characters" class="modal">
                 <div class="modal-content">
@@ -194,6 +238,7 @@
     <script src="components/chat.js"></script>
     <script src="components/logs.js"></script>
     <script src="components/settings.js"></script>
+    <script src="components/tester.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>
