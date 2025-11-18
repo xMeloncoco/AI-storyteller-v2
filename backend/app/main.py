@@ -19,7 +19,7 @@ import os
 
 from .database import init_db, get_db, SessionLocal
 from .config import settings
-from .routers import chat, stories, logs
+from .routers import chat, stories, logs, admin
 from .utils.logger import log_notification, log_error
 from . import __version__
 
@@ -127,6 +127,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(chat.router)
 app.include_router(stories.router)
 app.include_router(logs.router)
+app.include_router(admin.router)
 
 
 # =============================================================================

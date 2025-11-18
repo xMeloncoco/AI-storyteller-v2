@@ -302,6 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-settings').addEventListener('click', () => {
         showScreen('settings');
         SettingsComponent.loadSystemInfo();
+        SettingsComponent.loadTestDataList();
     });
 
     // Story screen
@@ -380,6 +381,19 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('setting-api-url').addEventListener('change', (e) => {
         SettingsComponent.updateSetting('apiUrl', e.target.value);
         checkConnection();
+    });
+
+    // Test Data Management
+    document.getElementById('btn-load-all-testdata').addEventListener('click', () => {
+        SettingsComponent.loadAllTestData();
+    });
+
+    document.getElementById('btn-refresh-testdata').addEventListener('click', () => {
+        SettingsComponent.loadTestDataList();
+    });
+
+    document.getElementById('btn-clear-testdata').addEventListener('click', () => {
+        SettingsComponent.clearAllTestData();
     });
 
     // Modals

@@ -1,0 +1,520 @@
+{
+  "title": "Starling Contract",
+  "description": "Two childhood friends, separated by tragedy and family interference, are thrust back together when a decades-old marriage contract becomes their only salvation from financial and legal ruin. What starts as bitter resentment evolves into rediscovered friendship as they navigate corporate sabotage, family expectations, and their own wounded hearts.",
+  "initial_message": "The Sterling Enterprises boardroom had never felt more like a battlefield.\n\nFifteen years. That's how long it had been since Miriam Cross and Alexander Sterling had seen each other, and the circumstances of their reunion couldn't have been more brutal. What started as a routine legal meeting had exploded into something far more complex when David Sterling, Alex's uncle and board member, dropped a bombshell that changed everything.\n\nThe marriage contract. Signed when both were barely five years old, buried in legal documents for decades, suddenly their only salvation.\n\nFor Miriam, the revelation came through her mother's trust fund lawyers - she owned 15% of Cross Industries whether she knew it or not, inherited from the mother she'd lost at eight. The company's impending bankruptcy wasn't just about her estranged father anymore; it would destroy her mother's charitable foundation, ruin thousands of loyal employees, and potentially drag Miriam's own assets down with it. The merger through marriage was the only legal mechanism that could save everything she'd unknowingly inherited and everything her mother had built.\n\nFor Alex, his parents had finally found the perfect weapon. Years of reckless behavior, public scandals, and deliberate corporate negligence had pushed them to their breaking point. Marriage to Miriam - with its built-in responsibility of managing the merged companies - or complete disinheritance. No more trust fund, no more position at Sterling Enterprises, no more safety net.\n\nNeither had a choice. Neither wanted this. And both blamed the other for the trap they found themselves in.\n\nThe lawyers had been dismissed an hour ago, leaving only Miriam and Alex in the sterile conference room, surrounded by contracts, financial reports, and the wreckage of their childhood friendship. The shouting match that followed had been legendary - fifteen years of hurt, abandonment, and resentment poured out in accusations and bitter truths. She'd called him a spoiled, worthless playboy who'd never worked a day in his life. He'd called her a cold, calculating bitch who'd forgotten where she came from.\n\nBut eventually, the rage burned itself out, leaving only exhausted resignation and the harsh reality of their situation. One month. That's what the contract required – one month of engagement, cohabitation, and public appearances before the wedding that would merge their families' empires.\n\nOne month of pretending they could stand each other.\n\nThe media had already caught wind of the story. \"Childhood Sweethearts Reunite\" the headlines would read, completely missing the bitter irony. They'd need to play the part of a couple rediscovering love, when in reality they were two wounded people bound together by legal necessity and mutual resentment.\n\nWhich brought them to tonight. Their first public appearance as an \"engaged couple\" - dinner at The Metropolitan Club, where New York's elite would gather to witness the Sterling heir finally settling down with his childhood friend. The restaurant was already buzzing with anticipation, photographers positioned outside, society reporters sharpening their claws.\n\nAlex had suggested they meet at the restaurant - probably hoping to avoid any private conversation beforehand. But Miriam knew better than to give him that advantage. She'd insisted he pick her up properly, play the gentleman for their audience.\n\nNow, as the elevator climbed toward her penthouse apartment, Miriam checked her reflection one final time. The black silk dress was elegant but not trying too hard, her makeup flawless but understated. She looked like what she was - a successful woman who didn't need a man's money or status.\n\nThe doorbell rang at exactly eight o'clock. Punctual, at least some things hadn't changed.\n\nMiriam took a breath, steeled herself for whatever version of Alexander Sterling waited on the other side of her door, and reached for the handle...",
+  "initial_location": "Miriam's Apartment - Living Room",
+  "initial_time": "Early evening, 8:00 PM",
+
+  "characters": [
+    {
+      "name": "Miriam Cross",
+      "type": "User",
+      "appearance": "A striking woman of 28 with sharp features softened by expressive eyes that reveal depth despite her guarded demeanor. Professional appearance, favors tailored business attire even outside work.",
+      "age": 28,
+      "backstory": "After losing her mother and brother in a car crash at age 8, Miriam endured years of emotional abuse from her grief-stricken father. Following her childhood friend Alex's sudden departure at 13, she fell into a pattern of toxic relationships before finding her strength abroad. She returned as a formidable finance professional, known for her sharp intellect and ruthless negotiation skills. Unknown to her until recently, she inherited 15% of Cross Industries from her mother, held in trust until her 30th birthday.",
+      "personality_traits": ["fiercely independent", "workaholic", "sharp-tongued", "guarded", "deeply loyal", "intelligent", "resilient"],
+      "speech_patterns": "Direct and professional with a tendency toward sarcasm as a defense mechanism. Uses precise language, rarely minces words.",
+      "core_values": ["independence", "truth", "loyalty", "justice", "hard work"],
+      "core_fears": ["abandonment", "losing control", "being vulnerable", "failure"],
+      "would_never_do": ["betray someone who trusts her", "give up without a fight", "show weakness to enemies", "forgive easily without genuine change"],
+      "would_always_do": ["protect those she cares about", "fight for what's right", "maintain her independence", "honor her commitments"],
+      "comfort_behaviors": ["working long hours", "organizing things", "sharp retorts", "emotional walls"],
+      "verbal_patterns": {
+        "greetings": ["Mr. Sterling", "Let's get this over with"],
+        "agreement": ["Fine", "If we must", "I suppose"],
+        "disagreement": ["Absolutely not", "You can't be serious", "That's ridiculous"],
+        "exclamations": ["Unbelievable", "Typical"],
+        "fillers": ["Look", "Listen", "Clearly"]
+      },
+      "sentence_structure": "Direct and concise, sometimes cutting. Uses complex vocabulary when emotional.",
+      "common_phrases": ["I don't have time for this", "Let's be clear about something", "Don't patronize me"],
+      "decision_style": "analytical but can be impulsive when emotions run high",
+      "internal_contradiction": "Craves genuine connection but pushes people away. Claims not to care about Alex but still wears the bracelet he gave her at age 7.",
+      "secret_kept": "Still has every letter she wrote to Alex after he left but never sent. Secretly follows his philanthropic work.",
+      "vulnerability": "Terrified of being abandoned again, which is why she cuts people off first"
+    },
+    {
+      "name": "Alexander Sterling",
+      "type": "Main",
+      "appearance": "Tall at 6'3\" with black hair and steel-gray eyes that can shift from charming to deadly in seconds. Impeccably dressed in expensive suits that fit like armor. Commands attention in any room.",
+      "age": 29,
+      "backstory": "Heir to Sterling Enterprises, sent to boarding school at 13 to separate him from Miriam, which broke something fundamental in him. Spent his teens and twenties as a notorious playboy, using women and parties to fill the void left by losing his best friend. Secretly uses his trust fund for philanthropy and sabotages his parents' ruthless business deals. Volunteers at grief counseling centers under a false name.",
+      "personality_traits": ["dominant", "short-tempered", "arrogant", "ruthless", "protective", "surprisingly vulnerable", "secretive"],
+      "speech_patterns": "Commanding and confident, uses his voice like a weapon. Can be charming or intimidating depending on his goal. Deflects with humor when uncomfortable.",
+      "core_values": ["protection", "redemption", "justice (hidden)", "loyalty"],
+      "core_fears": ["losing Miriam again", "becoming his parents", "his secrets being discovered", "being truly seen"],
+      "would_never_do": ["abandon Miriam again", "hurt innocents", "let his parents destroy more lives"],
+      "would_always_do": ["protect those he cares about", "honor his hidden commitments", "maintain his facade"],
+      "comfort_behaviors": ["intimidation", "reckless behavior", "expensive purchases", "late night drives"],
+      "verbal_patterns": {
+        "greetings": ["Miriam", "Miss Cross", "We need to talk"],
+        "agreement": ["Agreed", "Very well", "As you wish"],
+        "disagreement": ["That's not happening", "Try again", "Unacceptable"],
+        "exclamations": ["Christ", "Damn it"],
+        "fillers": ["Look", "Listen to me"]
+      },
+      "sentence_structure": "Authoritative and direct, but can become softer when speaking to Miriam in private moments",
+      "common_phrases": ["This isn't negotiable", "I won't let that happen", "You don't understand"],
+      "decision_style": "impulsive when emotional, strategic when calm",
+      "internal_contradiction": "Projects ruthless arrogance but secretly works to help those his family has harmed. Claims not to care but has been protecting Cross Industries for years.",
+      "secret_kept": "Has been anonymously donating to charities and sabotaging his parents' worst business deals. Volunteers at grief counseling centers. Never stopped thinking about Miriam.",
+      "vulnerability": "Believes he doesn't deserve forgiveness for abandoning Miriam. Uses anger to hide deep guilt and loneliness."
+    },
+    {
+      "name": "Margaret Chen",
+      "type": "Support",
+      "appearance": "A woman in her 60s with silver-streaked black hair, warm eyes, and the kind demeanor of someone who has seen it all.",
+      "age": 62,
+      "backstory": "Live-in housekeeper who has worked for the Sterlings for 20 years. Treats Alex like the son she never had and becomes immediately protective of Miriam.",
+      "personality_traits": ["maternal", "wise", "protective", "discrete", "perceptive", "warm"],
+      "speech_patterns": "Gentle but firm, speaks plainly with occasional motherly scolding. Uses endearments.",
+      "core_values": ["family", "kindness", "honesty", "hard work"],
+      "core_fears": ["seeing Alex hurt", "being unable to help"],
+      "would_never_do": ["betray Alex's trust", "gossip about the family", "stand by while someone suffers"],
+      "would_always_do": ["speak the truth when needed", "protect those she cares for", "maintain discretion"],
+      "comfort_behaviors": ["making tea", "cooking comfort food", "straightening things"],
+      "decision_style": "wise and thoughtful, considers others' feelings",
+      "secret_kept": "Knows about Alex's secret philanthropic work and volunteers with him sometimes",
+      "vulnerability": "Worries she couldn't protect Alex from his parents' coldness"
+    },
+    {
+      "name": "Ryan Mitchell",
+      "type": "Support",
+      "appearance": "Well-dressed lawyer in his early 30s with an honest face and sharp eyes that miss nothing.",
+      "age": 30,
+      "backstory": "Alex's best friend since boarding school, successful lawyer who sees through Alex's facade and serves as his voice of reason. One of the few people who knows about Alex's hidden activities.",
+      "personality_traits": ["loyal", "intelligent", "honest", "pragmatic", "protective", "witty"],
+      "speech_patterns": "Professional but friendly, uses lawyer-speak when necessary, dry humor with friends.",
+      "core_values": ["loyalty", "truth", "justice", "friendship"],
+      "core_fears": ["failing those he cares about", "losing Alex to self-destruction"],
+      "would_never_do": ["betray a client", "let a friend destroy themselves", "abuse his position"],
+      "would_always_do": ["speak truth to Alex", "provide sound counsel", "protect his friends"],
+      "decision_style": "analytical and careful, considers all angles"
+    },
+    {
+      "name": "Sarah Williams",
+      "type": "Support",
+      "appearance": "A polished woman in her mid-40s, professionally dressed with kind eyes that show her intelligence.",
+      "age": 45,
+      "backstory": "Miriam's former mentor and current Executive VP at Cross Industries. The one person Miriam trusts enough to contact about returning to save the company.",
+      "personality_traits": ["intelligent", "supportive", "professional", "trustworthy", "strategic"],
+      "speech_patterns": "Professional and measured, encouraging without being condescending.",
+      "core_values": ["integrity", "loyalty", "competence", "fairness"],
+      "core_fears": ["seeing the company fail", "letting down employees"],
+      "would_never_do": ["betray Miriam's trust", "compromise her principles", "give up on the company"],
+      "would_always_do": ["support Miriam", "fight for employees", "maintain professional standards"],
+      "decision_style": "strategic and thoughtful"
+    },
+    {
+      "name": "Richard Sterling",
+      "type": "Antagonist",
+      "appearance": "A cold, calculating man in his late 50s with graying hair and eyes like chips of ice.",
+      "age": 58,
+      "backstory": "Alex's father, cold businessman who values control above all else. Sees Miriam as beneath his son but recognizes the strategic value of the merger.",
+      "personality_traits": ["controlling", "cold", "calculating", "ruthless", "strategic", "arrogant"],
+      "speech_patterns": "Formal and commanding, speaks in imperatives, uses silence as a weapon.",
+      "core_values": ["power", "control", "legacy", "status"],
+      "core_fears": ["losing control", "failure", "weakness"],
+      "would_never_do": ["show vulnerability", "admit mistakes", "lose control"],
+      "would_always_do": ["maintain power", "control his family", "protect the Sterling name"],
+      "decision_style": "calculating and ruthless"
+    },
+    {
+      "name": "Victoria Sterling",
+      "type": "Antagonist",
+      "appearance": "Former socialite in her mid-50s, impeccably dressed with a smile that never reaches her eyes.",
+      "age": 55,
+      "backstory": "Alex's mother who married for status. Equally controlling, believes in maintaining appearances at all costs. Immediately begins trying to 'fix' Miriam.",
+      "personality_traits": ["controlling", "status-obsessed", "critical", "manipulative", "appearance-focused"],
+      "speech_patterns": "Passive-aggressive sweetness masking criticism, uses social expectations as weapons.",
+      "core_values": ["status", "appearances", "control", "tradition"],
+      "core_fears": ["scandal", "losing social standing", "being seen as inadequate"],
+      "would_never_do": ["allow scandal", "show genuine emotion", "lose social face"],
+      "would_always_do": ["maintain appearances", "control situations", "criticize others subtly"],
+      "decision_style": "manipulative and appearance-focused"
+    },
+    {
+      "name": "James Cross",
+      "type": "Antagonist",
+      "appearance": "A broken man in his late 50s who looks older than his years, disheveled and haunted.",
+      "age": 57,
+      "backstory": "Miriam's father who never recovered from his family's death. His poor business decisions have brought Cross Industries to the brink of bankruptcy. Now attempting to reconcile with Miriam.",
+      "personality_traits": ["broken", "weak", "erratic", "desperate", "guilt-ridden", "unstable"],
+      "speech_patterns": "Rambling and emotional, alternates between remorse and defensiveness.",
+      "core_values": ["family (lost)", "redemption (seeking)"],
+      "core_fears": ["dying alone", "being unforgivable", "complete failure"],
+      "would_never_do": ["admit responsibility easily", "get sober without help"],
+      "would_always_do": ["make excuses", "seek Miriam's attention", "self-sabotage"],
+      "decision_style": "erratic and impulsive, clouded by grief and alcohol"
+    },
+    {
+      "name": "David Sterling",
+      "type": "Support",
+      "appearance": "A distinguished man in his early 60s with kinder eyes than his brother Richard.",
+      "age": 62,
+      "backstory": "Alex's uncle and board member who secretly orchestrates the contract enforcement, believing it will stabilize both Alex and the company.",
+      "personality_traits": ["strategic", "pragmatic", "caring (hidden)", "manipulative", "intelligent"],
+      "speech_patterns": "Measured and professional, strategic in word choice.",
+      "core_values": ["family (in his own way)", "stability", "legacy"],
+      "core_fears": ["family destruction", "company collapse"],
+      "decision_style": "strategic and long-term focused"
+    },
+    {
+      "name": "Malcolm Blackwood",
+      "type": "Antagonist",
+      "appearance": "A ruthless corporate raider in his 60s with predatory eyes and an elegant facade.",
+      "age": 64,
+      "backstory": "CEO of Blackwood Industries who orchestrated the original car 'accident' twenty years ago to weaken Cross Industries for a hostile takeover. Been playing a decades-long game. Now sees the marriage merger as a threat.",
+      "personality_traits": ["ruthless", "patient", "strategic", "dangerous", "intelligent", "remorseless"],
+      "speech_patterns": "Smooth and cultured, hides threats in pleasant words.",
+      "core_values": ["power", "winning", "control"],
+      "core_fears": ["losing the long game", "exposure"],
+      "would_never_do": ["show mercy", "forgive enemies", "give up power"],
+      "would_always_do": ["plan long-term", "eliminate threats", "maintain his facade"],
+      "decision_style": "patient, strategic, ruthless"
+    },
+    {
+      "name": "James Rivera",
+      "type": "Support",
+      "appearance": "A professional chef in his 40s with an easy manner and perceptive eyes.",
+      "age": 43,
+      "backstory": "Personal chef who comes in daily to the Sterling penthouse. Discrete and professional, excellent at reading the room's tension.",
+      "personality_traits": ["professional", "discrete", "perceptive", "kind", "skilled"],
+      "speech_patterns": "Polite and professional, knows when to speak and when to stay silent.",
+      "decision_style": "tactful and considerate"
+    },
+    {
+      "name": "Thomas Kane",
+      "type": "Support",
+      "appearance": "Former military man in his 50s with sharp eyes and commanding presence.",
+      "age": 52,
+      "backstory": "Head of Sterling Tower security, former military, loyal to the Sterling family.",
+      "personality_traits": ["loyal", "professional", "observant", "protective", "disciplined"],
+      "speech_patterns": "Military precision, concise and clear.",
+      "decision_style": "tactical and protective"
+    }
+  ],
+
+  "locations": [
+    {
+      "name": "Miriam's Apartment - Living Room",
+      "description": "A luxury downtown apartment with floor-to-ceiling windows overlooking the city. Modern, minimalist design with expensive but tasteful furnishings. Everything perfectly organized and controlled.",
+      "type": "indoor",
+      "scope": "room"
+    },
+    {
+      "name": "Sterling Penthouse - Main Floor",
+      "description": "Massive living area with floor-to-ceiling windows overlooking the city, formal dining room, gourmet kitchen, Alex's home office, guest bathroom. Expensive but cold - all glass, steel, and marble.",
+      "type": "indoor",
+      "scope": "floor"
+    },
+    {
+      "name": "Sterling Penthouse - Upper Floor",
+      "description": "Master bedroom suite with walk-in closets and ensuite, second bedroom (Miriam's), shared library/study, private gym, rooftop terrace with infinity pool.",
+      "type": "indoor",
+      "scope": "floor"
+    },
+    {
+      "name": "Sterling Enterprises Boardroom",
+      "description": "A sterile conference room with a massive mahogany table, leather chairs, and walls lined with screens displaying financial data. Cold and intimidating.",
+      "type": "indoor",
+      "scope": "room"
+    },
+    {
+      "name": "The Metropolitan Club",
+      "description": "An exclusive restaurant where New York's elite gather. Elegant, old-money atmosphere with private booths and impeccable service. Photographers often wait outside.",
+      "type": "indoor",
+      "scope": "building"
+    },
+    {
+      "name": "Cross Industries Office",
+      "description": "Once-prestigious office building now showing signs of decline. Outdated technology, demoralized workforce, but still holding onto former glory.",
+      "type": "indoor",
+      "scope": "building"
+    },
+    {
+      "name": "The Old Oak Tree",
+      "description": "An ancient oak tree between the Cross and Sterling family estates where Miriam and Alex built their childhood fort. Now overgrown but the old carvings remain.",
+      "type": "outdoor",
+      "scope": "landmark"
+    },
+    {
+      "name": "Sterling Tower - Lobby",
+      "description": "Imposing marble lobby with security desk, private elevators, and an atmosphere of wealth and power.",
+      "type": "indoor",
+      "scope": "room"
+    },
+    {
+      "name": "Meridian Capital Management",
+      "description": "One of the top investment firms in the city where Miriam works as Senior Investment Director. Modern, competitive atmosphere.",
+      "type": "indoor",
+      "scope": "building"
+    }
+  ],
+
+  "relationships": [
+    {
+      "entity1": "Miriam Cross",
+      "entity2": "Alexander Sterling",
+      "type": "childhood friends turned bitter strangers forced into marriage",
+      "first_meeting": "Met at age 5 when their parents signed the marriage contract. Became inseparable best friends, built a fort in the old oak tree, shared everything.",
+      "trust": 0.2,
+      "affection": 0.3,
+      "familiarity": 0.6,
+      "history": "Were best friends from age 5-13. Alex was there for Miriam after her mother and brother died when she was 8, providing comfort through her darkest years. At 13, Alex was sent to boarding school without warning, never saying goodbye. Miriam waited by their oak tree for three days. They haven't seen each other in 15 years. Both harbor deep hurt, resentment, and buried feelings. The contract forces them back together when neither has a choice."
+    },
+    {
+      "entity1": "Miriam Cross",
+      "entity2": "Margaret Chen",
+      "type": "future housekeeper relationship, initially wary",
+      "first_meeting": "Will meet when Miriam moves into the Sterling penthouse",
+      "trust": 0.0,
+      "affection": 0.0,
+      "familiarity": 0.0,
+      "history": "Not yet met, but Margaret will become protective of Miriam"
+    },
+    {
+      "entity1": "Miriam Cross",
+      "entity2": "Sarah Williams",
+      "type": "mentor and trusted advisor",
+      "first_meeting": "Met when Miriam started at Cross Industries years ago",
+      "trust": 0.9,
+      "affection": 0.7,
+      "familiarity": 0.8,
+      "history": "Sarah mentored Miriam and has been one of the few constants in her professional life. One of the only people Miriam truly trusts."
+    },
+    {
+      "entity1": "Miriam Cross",
+      "entity2": "James Cross",
+      "type": "estranged father and daughter",
+      "first_meeting": "Father and daughter since birth",
+      "trust": 0.1,
+      "affection": 0.2,
+      "familiarity": 0.7,
+      "history": "After Miriam's mother and brother died in a car crash when she was 8, James became emotionally abusive in his grief. Miriam has completely cut contact. James is now trying to reconcile as the marriage brings publicity."
+    },
+    {
+      "entity1": "Miriam Cross",
+      "entity2": "Victoria Sterling",
+      "type": "future mother-in-law, hostile",
+      "first_meeting": "Knew each other when Miriam and Alex were children",
+      "trust": 0.1,
+      "affection": 0.0,
+      "familiarity": 0.4,
+      "history": "Victoria sees Miriam as beneath her son. Immediately begins trying to 'fix' Miriam - criticizing her wardrobe, career, independence."
+    },
+    {
+      "entity1": "Miriam Cross",
+      "entity2": "Richard Sterling",
+      "type": "future father-in-law, strategic opposition",
+      "first_meeting": "Knew each other when Miriam and Alex were children",
+      "trust": 0.2,
+      "affection": 0.0,
+      "familiarity": 0.4,
+      "history": "Richard sees Miriam as a necessary piece in a business merger. He values the contract but doesn't respect her as a person."
+    },
+    {
+      "entity1": "Alexander Sterling",
+      "entity2": "Margaret Chen",
+      "type": "surrogate mother and son",
+      "first_meeting": "When Margaret started working for the Sterlings 20 years ago",
+      "trust": 0.9,
+      "affection": 0.9,
+      "familiarity": 0.95,
+      "history": "Margaret has been the only real maternal figure in Alex's life. She knows his secrets and protects him fiercely."
+    },
+    {
+      "entity1": "Alexander Sterling",
+      "entity2": "Ryan Mitchell",
+      "type": "best friends since boarding school",
+      "first_meeting": "Met at boarding school when Alex was 13",
+      "trust": 0.95,
+      "affection": 0.8,
+      "familiarity": 0.9,
+      "history": "Ryan is one of the few people who sees through Alex's playboy facade. Knows about his secret philanthropic work. Serves as his voice of reason and closest friend."
+    },
+    {
+      "entity1": "Alexander Sterling",
+      "entity2": "Richard Sterling",
+      "type": "cold father and rebellious son",
+      "first_meeting": "Father and son since birth",
+      "trust": 0.2,
+      "affection": 0.1,
+      "familiarity": 0.8,
+      "history": "Richard has controlled Alex's life through money and manipulation. Sent him away from Miriam at 13. Alex rebels through reckless behavior while secretly sabotaging his father's worst business deals."
+    },
+    {
+      "entity1": "Alexander Sterling",
+      "entity2": "Victoria Sterling",
+      "type": "cold mother and son",
+      "first_meeting": "Mother and son since birth",
+      "trust": 0.2,
+      "affection": 0.15,
+      "familiarity": 0.8,
+      "history": "Victoria cares more about appearances than her son's wellbeing. Their relationship is formal and cold."
+    },
+    {
+      "entity1": "Alexander Sterling",
+      "entity2": "David Sterling",
+      "type": "uncle and nephew, complex",
+      "first_meeting": "Uncle and nephew since birth",
+      "trust": 0.5,
+      "affection": 0.4,
+      "familiarity": 0.7,
+      "history": "David orchestrated the contract enforcement, believing it would help Alex. Their relationship is complicated - David cares in his own manipulative way."
+    },
+    {
+      "entity1": "Richard Sterling",
+      "entity2": "Victoria Sterling",
+      "type": "arranged marriage couple",
+      "first_meeting": "Arranged marriage decades ago",
+      "trust": 0.6,
+      "affection": 0.3,
+      "familiarity": 0.9,
+      "history": "Married for business purposes, their cold relationship shaped Alex's view of marriage."
+    },
+    {
+      "entity1": "Richard Sterling",
+      "entity2": "Malcolm Blackwood",
+      "type": "business rivals",
+      "first_meeting": "Decades ago in business circles",
+      "trust": 0.1,
+      "affection": 0.0,
+      "familiarity": 0.7,
+      "history": "Long-standing rivalry, though Richard doesn't know Malcolm orchestrated the Cross family tragedy."
+    }
+  ],
+
+  "story_arcs": [
+    {
+      "name": "Forced Reunion",
+      "description": "Miriam and Alex's first encounters after 15 years, filled with anger, hurt, and forced cooperation. They must prepare for their public debut as an engaged couple.",
+      "order": 1,
+      "is_active": 1,
+      "start_condition": {},
+      "completion_condition": {
+        "flags": ["first_public_appearance_complete"]
+      },
+      "episodes": [
+        {
+          "name": "The Doorstep",
+          "description": "Alex arrives to pick up Miriam for their first public appearance. The tension is explosive.",
+          "order": 1,
+          "trigger_flags": [],
+          "completion_flags": ["alex_arrived_at_apartment"]
+        },
+        {
+          "name": "The Metropolitan Club",
+          "description": "Their first public appearance as an engaged couple. They must convince New York's elite while barely able to stand each other.",
+          "order": 2,
+          "trigger_flags": ["alex_arrived_at_apartment"],
+          "completion_flags": ["first_public_appearance_complete"]
+        }
+      ]
+    },
+    {
+      "name": "Under One Roof",
+      "description": "Miriam moves into the Sterling penthouse. Living together forces daily interactions and slowly breaks down their walls. Margaret becomes an unexpected ally.",
+      "order": 2,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["first_public_appearance_complete"]
+      },
+      "completion_condition": {
+        "flags": ["settled_into_penthouse", "established_boundaries"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "Corporate Warfare",
+      "description": "Miriam and Alex begin working together to save Cross Industries. They discover they make a formidable team professionally, even as personal tensions remain.",
+      "order": 3,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["settled_into_penthouse"]
+      },
+      "completion_condition": {
+        "flags": ["first_board_meeting_together", "discovered_working_chemistry"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "Old Wounds Surface",
+      "description": "As they spend more time together, the past comes rushing back. Secrets are revealed, truths are spoken, and they finally confront what happened 15 years ago.",
+      "order": 4,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["discovered_working_chemistry"]
+      },
+      "completion_condition": {
+        "flags": ["confronted_the_past", "alex_explained_boarding_school"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "Hidden Truths",
+      "description": "Miriam discovers Alex's secret philanthropic work. Alex learns about Miriam's unsent letters. Their perceptions of each other begin to shift.",
+      "order": 5,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["confronted_the_past"]
+      },
+      "completion_condition": {
+        "flags": ["discovered_alex_secrets", "alex_found_letters"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "The Blackwood Threat",
+      "description": "Malcolm Blackwood makes his move to prevent the merger. Miriam and Alex must work together to counter his schemes while dealing with growing feelings.",
+      "order": 6,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["discovered_alex_secrets"]
+      },
+      "completion_condition": {
+        "flags": ["blackwood_first_move_countered"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "Family Interference",
+      "description": "Victoria's attempts to control Miriam escalate. James Cross creates public embarrassment. The Sterlings' true colors show, pushing Alex and Miriam closer.",
+      "order": 7,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["blackwood_first_move_countered"]
+      },
+      "completion_condition": {
+        "flags": ["alex_stood_up_to_parents", "miriam_confronted_father"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "Rediscovering Us",
+      "description": "Miriam and Alex visit their old oak tree. Childhood memories resurface. They begin to remember not just the pain of separation, but the joy of their friendship.",
+      "order": 8,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["alex_stood_up_to_parents"]
+      },
+      "completion_condition": {
+        "flags": ["visited_oak_tree", "shared_childhood_memories"]
+      },
+      "episodes": []
+    },
+    {
+      "name": "The Choice",
+      "description": "With the wedding approaching and feelings deepening, Miriam and Alex must decide: is this still just a business arrangement, or has it become something real?",
+      "order": 9,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["shared_childhood_memories"]
+      },
+      "completion_condition": {
+        "flags": ["relationship_decision_made"]
+      },
+      "episodes": []
+    }
+  ]
+}

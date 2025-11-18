@@ -130,6 +130,19 @@
                         </label>
                     </div>
                     <div class="setting-group">
+                        <h3>Test Data Management</h3>
+                        <p>Load test stories and templates into the database for testing and development.</p>
+                        <div id="test-data-list" style="margin: 10px 0;">
+                            <p>Loading available test data...</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button id="btn-load-all-testdata" class="primary-btn">Load All Test Data</button>
+                            <button id="btn-refresh-testdata" class="secondary-btn">Refresh List</button>
+                            <button id="btn-clear-testdata" class="danger-btn">Clear All Templates</button>
+                        </div>
+                        <div id="test-data-status" style="margin-top: 10px;"></div>
+                    </div>
+                    <div class="setting-group">
                         <h3>System Info</h3>
                         <div id="system-info">
                             <p>Checking connection...</p>
