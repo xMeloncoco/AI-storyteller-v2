@@ -10,6 +10,10 @@ const path = require('path');
 // Keep a global reference of the window object
 let mainWindow;
 
+// Disable hardware acceleration to prevent GPU crashes on Windows
+// This fixes the "GPU process exited unexpectedly" error
+app.disableHardwareAcceleration();
+
 function createWindow() {
     // Create the browser window
     mainWindow = new BrowserWindow({
