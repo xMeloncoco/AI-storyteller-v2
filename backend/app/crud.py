@@ -327,6 +327,41 @@ def get_user_character(
     ).first()
 
 
+def get_character_state(
+    db: Session,
+    character_id: int,
+    playthrough_id: int
+) -> Optional[models.CharacterState]:
+    """Get the current state of a character in a playthrough"""
+    return db.query(models.CharacterState).filter(
+        and_(
+            models.CharacterState.character_id == character_id,
+            models.CharacterState.playthrough_id == playthrough_id
+        )
+    ).first()
+
+
+def get_character_goals(
+    db: Session,
+    character_id: int,
+    playthrough_id: int,
+    status: str = 'active',
+    limit: int = 5
+) -> List[models.CharacterGoal]:
+    """Get active goals for a character in a playthrough, ordered by priority"""
+    query = db.query(models.CharacterGoal).filter(
+        and_(
+            models.CharacterGoal.character_id == character_id,
+            models.CharacterGoal.playthrough_id == playthrough_id
+        )
+    )
+
+    if status:
+        query = query.filter(models.CharacterGoal.status == status)
+
+    return query.order_by(models.CharacterGoal.priority.desc()).limit(limit).all()
+
+
 # =============================================================================
 # SESSION OPERATIONS
 # =============================================================================

@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
     # Context and Memory Settings
     # How many messages to include in background context
-    max_context_messages: int = 20
+    max_context_messages: int = 40  # Increased from 20 to maintain better context
 
     # How often to save/summarize memory (every N AI responses)
     # Phase 4 feature: UPDATE MEMORY/SAVE BUTTON
@@ -68,7 +68,7 @@ class Settings(BaseSettings):
 
     # Maximum tokens for AI responses
     max_tokens_small: int = 500
-    max_tokens_large: int = 2000
+    max_tokens_large: int = 3000  # Increased from 2000 for more detailed responses
 
     class Config:
         env_file = ".env"

@@ -253,6 +253,28 @@ async def send_message(request: schemas.ChatRequest, db: Session = Depends(get_d
         }
     )
 
+    # Step 6.5: VALIDATION - Check generated content for consistency (Stage 7)
+    from ..ai.validator import ContentValidator
+
+    validator = ContentValidator(db, request.session_id)
+    user_character = crud.get_user_character(db, session.playthrough_id)
+    user_char_id = user_character.id if user_character else None
+
+    is_valid, validation_issues = validator.validate_generated_content(
+        generated_response,
+        character_decisions,
+        user_char_id
+    )
+
+    if not is_valid:
+        logger.warning(
+            f"Generated content failed validation. Issues: {', '.join(validation_issues)}",
+            "validation",
+            {"issues": validation_issues, "content": generated_response[:500]}
+        )
+        # Log the validation failure but continue - we don't want to block the story
+        # In a future enhancement, we could regenerate if validation fails
+
     # Step 7: Save AI response to database
     ai_conversation = crud.create_conversation(
         db,

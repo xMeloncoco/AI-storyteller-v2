@@ -280,8 +280,43 @@ class ContextBuilder:
             "appearance": character.appearance,
             "backstory": character.backstory or "",
             "personality_traits": character.personality_traits or "",
-            "speech_patterns": character.speech_patterns or ""
+            "speech_patterns": character.speech_patterns or "",
+            "core_values": character.core_values or "",
+            "core_fears": character.core_fears or "",
+            "would_never_do": character.would_never_do or "",
+            "would_always_do": character.would_always_do or ""
         }
+
+        # Get character's current emotional/mental state
+        char_state = crud.get_character_state(self.db, character_id, self.playthrough_id)
+        if char_state:
+            info["current_state"] = {
+                "emotional_state": char_state.current_emotional_state or char_state.baseline_emotional_state,
+                "emotion_cause": char_state.emotion_cause,
+                "emotion_intensity": char_state.emotion_intensity,
+                "stress_level": char_state.stress_level,
+                "energy_level": char_state.energy_level,
+                "mental_clarity": char_state.mental_clarity,
+                "primary_concern": char_state.primary_concern,
+                "secondary_concerns": char_state.secondary_concerns
+            }
+        else:
+            info["current_state"] = None
+
+        # Get character's active goals
+        char_goals = crud.get_character_goals(self.db, character_id, self.playthrough_id)
+        if char_goals:
+            info["goals"] = [
+                {
+                    "type": goal.goal_type,
+                    "content": goal.goal_content,
+                    "priority": goal.priority,
+                    "status": goal.status
+                }
+                for goal in char_goals
+            ]
+        else:
+            info["goals"] = []
 
         # Get relationships involving this character
         relationships = crud.get_all_relationships_for_character(
