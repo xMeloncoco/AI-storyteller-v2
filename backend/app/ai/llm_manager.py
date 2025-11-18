@@ -109,16 +109,21 @@ class LLMManager:
                 response = await self._call_nebius(
                     model, prompt, max_tokens, temperature, system_prompt
                 )
+            elif self.provider == "local":
+                # Local Ollama
+                response = await self._call_ollama(
+                    model, prompt, max_tokens, temperature, system_prompt
+                )
             elif self.provider == "demo":
                 # Demo mode - returns mock responses for testing without API
                 response = await self._generate_demo_response(prompt, model_size)
             else:
-                # Fallback to local - not yet implemented
+                # Unknown provider
                 self.logger.error(
-                    f"Provider {self.provider} not fully implemented",
+                    f"Unknown provider: {self.provider}",
                     "ai"
                 )
-                response = "Error: Local provider not yet implemented"
+                response = f"Error: Unknown provider {self.provider}"
 
             # Log successful response
             self.logger.notification(
@@ -276,6 +281,80 @@ class LLMManager:
                 return result["choices"][0]["message"]["content"]
             else:
                 raise Exception("Invalid response format from Nebius")
+
+    async def _call_ollama(
+        self,
+        model: str,
+        prompt: str,
+        max_tokens: int,
+        temperature: float,
+        system_prompt: Optional[str]
+    ) -> str:
+        """
+        Call local Ollama API
+
+        Ollama provides a local LLM server with OpenAI-compatible API
+        No API key needed, works offline!
+        """
+        # Build messages array
+        messages = []
+
+        if system_prompt:
+            messages.append({
+                "role": "system",
+                "content": system_prompt
+            })
+
+        messages.append({
+            "role": "user",
+            "content": prompt
+        })
+
+        # Prepare request payload (Ollama uses similar format to OpenAI)
+        payload = {
+            "model": model,
+            "messages": messages,
+            "options": {
+                "num_predict": max_tokens,
+                "temperature": temperature
+            },
+            "stream": False
+        }
+
+        # Make the API call (no auth needed for local Ollama)
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:  # Longer timeout for local generation
+                response = await client.post(
+                    f"{self.base_url}/api/chat",
+                    json=payload
+                )
+
+                if response.status_code != 200:
+                    error_detail = response.text
+                    self.logger.error(
+                        f"Ollama API error: {response.status_code}",
+                        "ai",
+                        {"status": response.status_code, "detail": error_detail}
+                    )
+                    raise Exception(f"Ollama error {response.status_code}: {error_detail}")
+
+                result = response.json()
+
+                # Extract the generated text from Ollama response format
+                if "message" in result and "content" in result["message"]:
+                    return result["message"]["content"]
+                else:
+                    raise Exception("Invalid response format from Ollama")
+        except httpx.ConnectError:
+            self.logger.error(
+                "Cannot connect to Ollama. Is it running?",
+                "ai",
+                {"base_url": self.base_url}
+            )
+            raise Exception(
+                "Cannot connect to Ollama. Make sure Ollama is installed and running. "
+                "Visit https://ollama.com/download"
+            )
 
     async def analyze_character_decision(
         self,

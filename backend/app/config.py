@@ -24,9 +24,11 @@ class Settings(BaseSettings):
     chroma_path: str = "./data/chroma"
 
     # AI Provider Configuration
-    # Options: "openrouter", "nebius", "local" (for Ollama), "demo" (for testing without API)
-    # IMPORTANT: Set to "demo" for testing without AI, or "openrouter"/"nebius" with API key
-    ai_provider: str = "demo"
+    # Options: "local" (Ollama - recommended!), "openrouter", "nebius", "demo"
+    # "local" = Uses Ollama for offline, reliable AI (no API keys needed!)
+    # "openrouter"/"nebius" = Online APIs (requires API key, subject to rate limits)
+    # "demo" = Testing mode without AI
+    ai_provider: str = "local"
 
     # OpenRouter Settings (FREE tier available!)
     # Get free API key from https://openrouter.ai/
@@ -42,18 +44,16 @@ class Settings(BaseSettings):
     ollama_host: str = "http://localhost:11434"
 
     # Model Configuration
-    # Small model: Used for quick analysis tasks (character decisions, event detection)
-    # For FREE OpenRouter: add :free suffix to model name!
-    # Updated: Phi-3 Mini is typically more available and faster for quick tasks
-    small_model: str = "microsoft/phi-3-mini-128k-instruct:free"
-    # Large model: Used for story generation
-    # For FREE OpenRouter: add :free suffix to model name!
-    # Updated: Gemma 2 9B is currently available and works well for story generation
-    large_model: str = "google/gemma-2-9b-it:free"
+    # For LOCAL (Ollama) - recommended for reliability:
+    #   small_model: "llama3.2:3b" (3GB, fast for quick tasks)
+    #   large_model: "llama3.2" (4.7GB, better for story generation)
+    # For OpenRouter (online, requires API key):
+    #   Add ":free" suffix and get key from https://openrouter.ai/
 
-    # NOTE: Free tier models may be rate-limited during peak usage
-    # For better reliability, get a free API key from https://openrouter.ai/
-    # and set it in your .env file: OPENROUTER_API_KEY=your_key_here
+    # Small model: Used for quick analysis tasks (character decisions, event detection)
+    small_model: str = "llama3.2:3b"
+    # Large model: Used for story generation
+    large_model: str = "llama3.2"
 
     # Application Settings
     log_level: str = "INFO"
