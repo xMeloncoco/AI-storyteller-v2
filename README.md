@@ -143,9 +143,9 @@ AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=your_key
 NEBIUS_API_KEY=your_key
 
-# Models (free options recommended)
-SMALL_MODEL=meta-llama/llama-3.2-3b-instruct:free
-LARGE_MODEL=meta-llama/llama-3.1-8b-instruct:free
+# Models (free options - updated for reliability)
+SMALL_MODEL=microsoft/phi-3-mini-128k-instruct:free
+LARGE_MODEL=google/gemma-2-9b-it:free
 
 # Database
 DATABASE_URL=sqlite:///./data/dreamwalkers.db
@@ -222,6 +222,16 @@ MAX_TOKENS_LARGE=2000
 - Verify `.env` file has correct AI_PROVIDER and API key
 - Check Settings → System Info → AI Configured should be "Yes"
 - See [AI_SETUP.md](./AI_SETUP.md) for free API keys
+
+### Rate limit errors (429)
+Free tier models are shared resources and may be rate-limited during peak usage:
+- **Quick fix**: Wait 1-2 minutes and try again
+- **Better solution**: Get a free API key from https://openrouter.ai/ and add to `.env`:
+  ```
+  OPENROUTER_API_KEY=your_key_here
+  ```
+- This accumulates your own rate limits instead of using shared limits
+- OpenRouter free tier includes $1 free credit and generous rate limits
 
 ### No stories available
 - Go to Settings → Test Data Management
