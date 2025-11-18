@@ -55,8 +55,28 @@ def init_db():
     # This must happen before create_all()
     from . import models  # noqa: F401
 
-    # Create all tables
-    Base.metadata.create_all(bind=engine)
+    try:
+        # Create all tables
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        error_msg = str(e)
+        if "index" in error_msg.lower() and "already exists" in error_msg.lower():
+            print("\n" + "="*50)
+            print("DATABASE SCHEMA CONFLICT DETECTED")
+            print("="*50)
+            print(f"Error: {error_msg}")
+            print("\nThis usually means the database schema has changed.")
+            print("To fix this, you have two options:")
+            print("\n1. Delete the database and recreate it (recommended for development):")
+            print("   - Delete the file: ./data/dreamwalkers.db")
+            print("   - Restart the application")
+            print("\n2. Use database migrations (for production):")
+            print("   - This feature is not yet implemented")
+            print("="*50 + "\n")
+            raise
+        else:
+            # Re-raise other exceptions
+            raise
 
     # Log successful initialization
     # Note: Actual logging will be done through our logging system in Phase 1.1
