@@ -73,26 +73,39 @@ CRITICAL RULES - READ CAREFULLY:
 2. NEVER write dialogue, thoughts, or actions for the user's character
 3. ONLY write about NPCs (non-player characters) and the environment
 4. Keep your response to 2-4 short paragraphs MAXIMUM - be concise!
-5. Focus on how NPCs react to what the user did/said
+5. Characters MUST act consistently with their established personality, values, and constraints
+6. Characters have their own goals and motivations - they don't exist just to agree with the user
+
+CHARACTER CONSISTENCY IS CRITICAL:
+- Each character has been analyzed and has made a decision based on their personality, goals, and emotional state
+- You MUST follow the character decisions provided above
+- If a character refuses or resists the user's action, show this clearly in the narrative
+- Characters should speak and act according to their established traits and speech patterns
+- Do NOT make characters suddenly change personality or act out of character
 
 WHAT TO WRITE:
-- NPC reactions, dialogue, and actions
+- NPC reactions, dialogue, and actions (FOLLOWING the character decisions above)
 - Environmental descriptions
 - What the user sees/hears happening around them
-- How NPCs feel (shown through body language, not internal thoughts)
+- How NPCs feel (shown through body language, facial expressions, and tone - not internal thoughts)
+- Tension and conflict when characters disagree or have different goals
 
 WHAT NOT TO WRITE:
 - What the user character says (they already said it!)
 - What the user character thinks or feels
 - What the user character does next
 - Long descriptive passages (keep it brief!)
+- Characters behaving inconsistently with their personality
+- Everyone agreeing with the user just because they're the protagonist
 
 STYLE GUIDELINES:
 - Write in third-person perspective
 - Show NPC emotions through actions and expressions, not just stating them
-- Match each character's speech patterns and personality
+- Match each character's speech patterns and personality EXACTLY
 - If a character refuses the user's action, show this through their response
 - Keep the pacing tight - no unnecessary details
+- Dialogue should be SHORT (1-2 sentences per character response)
+- Focus on meaningful reactions, not filler text
 
 LENGTH: 2-4 SHORT PARAGRAPHS. Not more. This is important.
 
@@ -119,6 +132,51 @@ Write the next part of the story:"""
         speech = character_info.get("speech_patterns", "")
         name = character_info.get("name", "Character")
         char_type = character_info.get("type", "Main")
+        values = character_info.get("core_values", "")
+        fears = character_info.get("core_fears", "")
+        never_do = character_info.get("would_never_do", "")
+        always_do = character_info.get("would_always_do", "")
+
+        # Add emotional state if available
+        state_text = ""
+        current_state = character_info.get("current_state")
+        if current_state:
+            emotional = current_state.get("emotional_state", "neutral")
+            cause = current_state.get("emotion_cause", "")
+            stress = current_state.get("stress_level", 0.5)
+            clarity = current_state.get("mental_clarity", 0.8)
+            concern = current_state.get("primary_concern", "")
+
+            state_text = f"""
+CURRENT EMOTIONAL STATE: {emotional}"""
+            if cause:
+                state_text += f"\nEMOTION CAUSE: {cause}"
+            state_text += f"\nSTRESS LEVEL: {stress}/1.0 (higher = more impulsive, less rational)"
+            state_text += f"\nMENTAL CLARITY: {clarity}/1.0 (higher = more rational thinking)"
+            if concern:
+                state_text += f"\nPRIMARY CONCERN: {concern}"
+
+        # Add goals if available
+        goals_text = ""
+        goals = character_info.get("goals", [])
+        if goals:
+            goals_text = "\n\nACTIVE GOALS (what they're trying to achieve):"
+            for goal in goals[:3]:  # Top 3 goals
+                goal_type = goal.get("type", "")
+                content = goal.get("content", "")
+                priority = goal.get("priority", 5)
+                goals_text += f"\n  [{goal_type.upper()}] (priority {priority}/10): {content}"
+
+        # Add relationship context
+        relationships_text = ""
+        rels = character_info.get("relationships", [])
+        if rels:
+            relationships_text = "\n\nRELATIONSHIPS:"
+            for rel in rels:
+                other = rel.get("with", "")
+                trust = rel.get("trust", 0.5)
+                affection = rel.get("affection", 0.5)
+                relationships_text += f"\n  {other}: Trust={trust:.1f}, Affection={affection:.1f}"
 
         prompt = f"""You are analyzing what a character would do in a story situation.
 
@@ -126,7 +184,22 @@ CHARACTER: {name}
 TYPE: {char_type}
 PERSONALITY TRAITS: {traits}
 BACKSTORY: {backstory}
-SPEECH PATTERNS: {speech}
+SPEECH PATTERNS: {speech}"""
+
+        if values:
+            prompt += f"\nCORE VALUES: {values}"
+        if fears:
+            prompt += f"\nCORE FEARS: {fears}"
+        if never_do:
+            prompt += f"\nWOULD NEVER DO: {never_do}"
+        if always_do:
+            prompt += f"\nWOULD ALWAYS DO: {always_do}"
+
+        prompt += state_text
+        prompt += goals_text
+        prompt += relationships_text
+
+        prompt += f"""
 
 CURRENT CONTEXT:
 {context}
@@ -137,18 +210,25 @@ USER ACTION/INPUT:
 TASK: Determine what {name} would realistically do in response to this situation.
 
 Consider:
-1. Is this action consistent with their personality?
-2. Would they agree or refuse?
-3. What is their emotional reaction?
-4. What would they say or do?
+1. Their personality traits and values
+2. Their current emotional state and stress level
+3. Their active goals (are they trying to achieve something?)
+4. Their relationships with others present
+5. What they WOULD NEVER DO and WOULD ALWAYS DO
+6. Their fears and what they care about
+
+CRITICAL: This character MUST remain consistent with their established traits, values, and constraints.
+- If the situation conflicts with their "WOULD NEVER DO" list, they WILL refuse or resist
+- If their goals are threatened, they will act to protect them
+- Their emotional state and stress level affect HOW they respond (high stress = more emotional/impulsive)
 
 Respond in JSON format:
 {{
   "action": "brief description of what they do",
-  "dialogue": "what they say (empty string if they stay silent)",
+  "dialogue": "what they say (1-2 sentences max, empty string if silent)",
   "emotion": "their current emotional state",
   "refuses": true or false (do they refuse or resist the user's action?),
-  "reason": "why they made this decision based on their personality"
+  "reason": "why they made this decision based on their personality, goals, and state"
 }}
 
 Important: Characters have their own will. They can refuse, disagree, or react negatively if that's what their personality dictates.
