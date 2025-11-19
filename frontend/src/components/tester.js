@@ -59,7 +59,9 @@ const TesterComponent = {
             this.showDataView('characters');
 
         } catch (error) {
-            container.innerHTML = `<p style="color: #ef4444;">Error loading playthrough data: ${error.message}</p>`;
+            const errorMsg = error.message || error.toString() || 'Unknown error occurred';
+            console.error('Error loading playthrough data:', error);
+            container.innerHTML = `<p style="color: #ef4444;">Error loading playthrough data: ${errorMsg}</p>`;
         }
     },
 
@@ -319,7 +321,9 @@ const TesterComponent = {
             container.innerHTML = html;
 
         } catch (error) {
-            container.innerHTML = `<p style="color: #ef4444;">Error loading context: ${error.message}</p>`;
+            const errorMsg = error.message || error.toString() || 'Unknown error occurred';
+            console.error('Error loading context:', error);
+            container.innerHTML = `<p style="color: #ef4444;">Error loading context: ${errorMsg}</p>`;
         }
     },
 
@@ -372,7 +376,9 @@ const TesterComponent = {
             }, 5000);
 
         } catch (error) {
-            statusContainer.innerHTML = `<p style="color: #ef4444;">Error: ${error.message}</p>`;
+            const errorMsg = error.message || error.toString() || 'Unknown error occurred';
+            console.error('Error resetting playthrough:', error);
+            statusContainer.innerHTML = `<p style="color: #ef4444;">Error: ${errorMsg}</p>`;
         }
     }
 };

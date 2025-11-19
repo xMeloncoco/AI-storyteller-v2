@@ -309,7 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Need an active playthrough to use tester
         if (AppState.currentPlaythrough) {
             showScreen('tester');
-            TesterComponent.init(AppState.currentPlaythrough, AppState.currentSession);
+            TesterComponent.init(AppState.currentPlaythrough.id, AppState.currentSession?.id);
         } else {
             alert('Please select a playthrough first before using the Tester.');
         }
