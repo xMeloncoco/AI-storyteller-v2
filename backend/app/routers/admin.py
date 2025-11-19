@@ -561,12 +561,12 @@ async def get_playthrough_data(playthrough_id: int, db: Session = Depends(get_db
         # Get sessions
         sessions = db.query(models.Session).filter(
             models.Session.playthrough_id == playthrough_id
-        ).order_by(models.Session.created_at.desc()).limit(10).all()
+        ).order_by(models.Session.started_at.desc()).limit(10).all()
 
         sessions_data = [{
             "id": session.id,
-            "created_at": session.created_at.isoformat() if session.created_at else None,
-            "last_activity": session.last_activity.isoformat() if session.last_activity else None,
+            "created_at": session.started_at.isoformat() if session.started_at else None,
+            "last_activity": session.last_active.isoformat() if session.last_active else None,
             "conversation_count": db.query(models.Conversation).filter(
                 models.Conversation.session_id == session.id
             ).count()
