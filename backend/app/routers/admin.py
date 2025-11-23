@@ -552,9 +552,8 @@ async def get_playthrough_data(playthrough_id: int, db: Session = Depends(get_db
 
         memory_data = [{
             "id": mem.id,
-            "flag_name": mem.flag_name,
+            "flag_type": mem.flag_type,
             "flag_value": mem.flag_value,
-            "description": mem.description,
             "importance": mem.importance
         } for mem in memory_flags]
 
@@ -581,13 +580,25 @@ async def get_playthrough_data(playthrough_id: int, db: Session = Depends(get_db
             ).order_by(models.SceneState.created_at.desc()).first()
 
             if scene:
+                # Get characters in scene
+                scene_characters = db.query(models.SceneCharacter).filter(
+                    models.SceneCharacter.scene_state_id == scene.id
+                ).all()
+
+                characters_present = [{
+                    "character_name": sc.character_name,
+                    "character_type": sc.character_type,
+                    "mood": sc.character_mood,
+                    "intent": sc.character_intent
+                } for sc in scene_characters]
+
                 scene_state = {
                     "location": scene.location,
                     "time_of_day": scene.time_of_day,
                     "weather": scene.weather,
                     "emotional_tone": scene.emotional_tone,
                     "scene_context": scene.scene_context,
-                    "characters_present": scene.characters_present
+                    "characters_present": characters_present
                 }
 
         return {
@@ -640,14 +651,14 @@ async def get_context_window(session_id: int, db: Session = Depends(get_db)):
         # Get conversation history for this session
         conversations = db.query(models.Conversation).filter(
             models.Conversation.session_id == session_id
-        ).order_by(models.Conversation.created_at.desc()).limit(20).all()
+        ).order_by(models.Conversation.timestamp.desc()).limit(20).all()
 
         conversation_history = [{
             "id": conv.id,
             "speaker_type": conv.speaker_type,
             "speaker_name": conv.speaker_name,
             "message": conv.message,
-            "created_at": conv.created_at.isoformat() if conv.created_at else None
+            "created_at": conv.timestamp.isoformat() if conv.timestamp else None
         } for conv in reversed(conversations)]
 
         return {
@@ -798,12 +809,12 @@ async def get_session_logs_grouped(
         # Get all conversations for this session
         conversations = db.query(models.Conversation).filter(
             models.Conversation.session_id == session_id
-        ).order_by(models.Conversation.created_at).all()
+        ).order_by(models.Conversation.timestamp).all()
 
         # Get all logs for this session
         logs = db.query(models.Log).filter(
             models.Log.session_id == session_id
-        ).order_by(models.Log.created_at).limit(limit).all()
+        ).order_by(models.Log.timestamp).limit(limit).all()
 
         # Group logs by conversation turn
         grouped_logs = []
@@ -817,7 +828,7 @@ async def get_session_logs_grouped(
 
                 current_group = {
                     "user_message": conv.message,
-                    "timestamp": conv.created_at.isoformat() if conv.created_at else None,
+                    "timestamp": conv.timestamp.isoformat() if conv.timestamp else None,
                     "logs": [],
                     "ai_response": None
                 }
@@ -832,14 +843,14 @@ async def get_session_logs_grouped(
         for log in logs:
             # Find the appropriate group based on timestamp
             for group in grouped_logs:
-                if log.created_at and group["timestamp"]:
-                    if log.created_at.isoformat() >= group["timestamp"]:
+                if log.timestamp and group["timestamp"]:
+                    if log.timestamp.isoformat() >= group["timestamp"]:
                         group["logs"].append({
                             "type": log.log_type,
                             "category": log.log_category,
-                            "message": log.log_message,
-                            "timestamp": log.created_at.isoformat() if log.created_at else None,
-                            "metadata": log.metadata
+                            "message": log.message,
+                            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
+                            "details": log.details
                         })
 
         return {

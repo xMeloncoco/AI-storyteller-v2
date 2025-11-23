@@ -81,6 +81,12 @@ const TesterComponent = {
 
         const data = this.playthroughData;
 
+        // Check if data is loaded
+        if (!data) {
+            container.innerHTML = '<p style="color: #fbbf24;">Playthrough data not loaded. Please reload the tester.</p>';
+            return;
+        }
+
         switch (viewType) {
             case 'characters':
                 this.displayCharacters(data.characters);
@@ -260,8 +266,8 @@ const TesterComponent = {
         } else {
             html += '<ul class="tester-flags-list">';
             for (const flag of memoryFlags) {
-                html += `<li><strong>${flag.flag_name}:</strong> ${flag.flag_value}`;
-                if (flag.description) html += `<br><span style="color: #9ca3af; font-size: 0.9em;">${flag.description}</span>`;
+                html += `<li><strong>${flag.flag_type}:</strong> ${flag.flag_value || 'N/A'}`;
+                if (flag.importance) html += `<br><span style="color: #9ca3af; font-size: 0.9em;">Importance: ${flag.importance}/10</span>`;
                 html += `</li>`;
             }
             html += '</ul>';
@@ -290,7 +296,19 @@ const TesterComponent = {
         if (scene.weather) html += `<p><strong>Weather:</strong> ${scene.weather}</p>`;
         if (scene.emotional_tone) html += `<p><strong>Mood:</strong> ${scene.emotional_tone}</p>`;
         if (scene.scene_context) html += `<p><strong>Context:</strong> ${scene.scene_context}</p>`;
-        if (scene.characters_present) html += `<p><strong>Characters Present:</strong> ${scene.characters_present}</p>`;
+
+        // Display characters present
+        if (scene.characters_present && scene.characters_present.length > 0) {
+            html += `<p><strong>Characters Present:</strong></p><ul>`;
+            for (const char of scene.characters_present) {
+                html += `<li>${char.character_name} (${char.character_type})`;
+                if (char.mood) html += ` - Mood: ${char.mood}`;
+                if (char.intent) html += ` - Intent: ${char.intent}`;
+                html += `</li>`;
+            }
+            html += `</ul>`;
+        }
+
         html += '</div>';
 
         container.innerHTML = html;
