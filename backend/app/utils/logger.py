@@ -6,6 +6,7 @@ This replaces console.log and provides structured logging to the database.
 
 Log Types:
 - notification: Normal system events (just stating something happened)
+- warning: Something unusual or potentially problematic (but not blocking)
 - error: Something went wrong
 - edit: Database was modified
 - ai_decision: AI made a decision
@@ -119,6 +120,20 @@ class AppLogger:
         """
         return self._create_log("error", message, category, details)
 
+    def warning(
+        self,
+        message: str,
+        category: Optional[str] = None,
+        details: Optional[Any] = None
+    ) -> Log:
+        """
+        Log a warning (something unusual but not blocking)
+
+        Example:
+            logger.warning("Validation failed but continuing", "validation", {"issues": issues})
+        """
+        return self._create_log("warning", message, category, details)
+
     def edit(
         self,
         message: str,
@@ -202,6 +217,18 @@ def log_error(
     """Log an error without creating a logger instance"""
     logger = AppLogger(db, session_id)
     return logger.error(message, category, details)
+
+
+def log_warning(
+    db: Session,
+    message: str,
+    category: Optional[str] = None,
+    details: Optional[Any] = None,
+    session_id: Optional[int] = None
+) -> Log:
+    """Log a warning without creating a logger instance"""
+    logger = AppLogger(db, session_id)
+    return logger.warning(message, category, details)
 
 
 def log_edit(
