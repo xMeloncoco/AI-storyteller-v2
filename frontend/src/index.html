@@ -163,17 +163,19 @@
                         <div id="tester-playthrough-info" style="margin-bottom: 20px;">
                             <p>Select a playthrough first</p>
                         </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-direction: column;">
-                            <button id="btn-tester-view-database" class="tester-view-btn active">Database</button>
-                            <button id="btn-tester-view-context" class="tester-view-btn">Context Window</button>
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="margin: 0 0 10px 0; padding-bottom: 8px; border-bottom: 1px solid #444; color: #a0aec0;">Database</h3>
+                            <div id="tester-database-nav" style="display: flex; flex-direction: column; gap: 8px; margin-left: 12px;">
+                                <button id="btn-tester-characters" class="tester-nav-btn active">Characters</button>
+                                <button id="btn-tester-relationships" class="tester-nav-btn">Relationships</button>
+                                <button id="btn-tester-locations" class="tester-nav-btn">Locations</button>
+                                <button id="btn-tester-arcs" class="tester-nav-btn">Story Arcs</button>
+                                <button id="btn-tester-flags" class="tester-nav-btn">Flags</button>
+                                <button id="btn-tester-scene" class="tester-nav-btn">Current Scene</button>
+                            </div>
                         </div>
-                        <div id="tester-database-nav" style="display: flex; flex-direction: column; gap: 8px;">
-                            <button id="btn-tester-characters" class="tester-nav-btn active">Characters</button>
-                            <button id="btn-tester-relationships" class="tester-nav-btn">Relationships</button>
-                            <button id="btn-tester-locations" class="tester-nav-btn">Locations</button>
-                            <button id="btn-tester-arcs" class="tester-nav-btn">Story Arcs</button>
-                            <button id="btn-tester-flags" class="tester-nav-btn">Flags</button>
-                            <button id="btn-tester-scene" class="tester-nav-btn">Current Scene</button>
+                        <div style="margin-bottom: 20px;">
+                            <button id="btn-tester-view-context" class="tester-view-btn" style="width: 100%;">Context Window</button>
                         </div>
                         <div style="margin-top: 20px;">
                             <button id="btn-tester-reset" class="danger-btn" style="width: 100%;">Reset Playthrough</button>

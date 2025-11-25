@@ -63,11 +63,14 @@ class ContextBuilder:
             "memory"
         )
 
-    def build_full_context(self) -> str:
+    def build_full_context(self, include_conversation: bool = True) -> str:
         """
         Build the complete context string for story generation
 
         This is the main method that assembles all context pieces
+
+        Args:
+            include_conversation: Whether to include recent conversation history (default True)
         """
         self.logger.context("Building full context", "memory")
 
@@ -85,9 +88,10 @@ class ContextBuilder:
         characters_context = self._get_characters_in_scene()
         context_parts.append(f"\nCHARACTERS PRESENT:\n{characters_context}")
 
-        # 4. Conversation history
-        history_context = self._get_conversation_history()
-        context_parts.append(f"\nRECENT CONVERSATION:\n{history_context}")
+        # 4. Conversation history (optional)
+        if include_conversation:
+            history_context = self._get_conversation_history()
+            context_parts.append(f"\nRECENT CONVERSATION:\n{history_context}")
 
         # 5. Relationship information
         relationships_context = self._get_relationships_context()

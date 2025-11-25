@@ -415,13 +415,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Tester view switching
-    document.getElementById('btn-tester-view-database').addEventListener('click', () => {
-        TesterComponent.switchView('database');
-    });
-
+    // Tester context view toggle
     document.getElementById('btn-tester-view-context').addEventListener('click', () => {
-        TesterComponent.switchView('context');
+        if (TesterComponent.currentView === 'context') {
+            TesterComponent.switchToDatabaseView();
+        } else {
+            TesterComponent.switchToContextView();
+        }
     });
 
     // Tester database navigation

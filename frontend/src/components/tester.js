@@ -346,27 +346,33 @@ const TesterComponent = {
     },
 
     /**
-     * Switch between database and context views
-     * @param {string} view - 'database' or 'context'
+     * Switch to context window view
      */
-    async switchView(view) {
-        this.currentView = view;
+    async switchToContextView() {
+        this.currentView = 'context';
 
-        // Update button states
-        document.querySelectorAll('.tester-view-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        document.getElementById(`btn-tester-view-${view}`).classList.add('active');
+        // Show context container, hide database container
+        document.getElementById('tester-database-container').style.display = 'none';
+        document.getElementById('tester-context-container').style.display = 'block';
 
-        // Show/hide appropriate container
-        if (view === 'database') {
-            document.getElementById('tester-database-container').style.display = 'block';
-            document.getElementById('tester-context-container').style.display = 'none';
-        } else {
-            document.getElementById('tester-database-container').style.display = 'none';
-            document.getElementById('tester-context-container').style.display = 'block';
-            await this.loadContextView();
-        }
+        // Update button appearance
+        document.getElementById('btn-tester-view-context').classList.add('active');
+
+        await this.loadContextView();
+    },
+
+    /**
+     * Switch back to database view
+     */
+    switchToDatabaseView() {
+        this.currentView = 'database';
+
+        // Show database container, hide context container
+        document.getElementById('tester-database-container').style.display = 'block';
+        document.getElementById('tester-context-container').style.display = 'none';
+
+        // Update button appearance
+        document.getElementById('btn-tester-view-context').classList.remove('active');
     },
 
     /**

@@ -644,9 +644,9 @@ async def get_context_window(session_id: int, db: Session = Depends(get_db)):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Build context
+        # Build context without conversation history for cleaner tester display
         context_builder = ContextBuilder(db, session_id)
-        full_context = context_builder.build_full_context()
+        full_context = context_builder.build_full_context(include_conversation=False)
 
         # Get conversation history for this session
         conversations = db.query(models.Conversation).filter(
