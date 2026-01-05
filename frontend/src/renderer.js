@@ -415,38 +415,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Tester view switching
-    document.getElementById('btn-tester-view-database').addEventListener('click', () => {
-        TesterComponent.switchView('database');
+    // Tester navigation buttons
+    document.getElementById('btn-tester-context').addEventListener('click', () => {
+        TesterComponent.showView('context');
     });
 
-    document.getElementById('btn-tester-view-context').addEventListener('click', () => {
-        TesterComponent.switchView('context');
+    document.getElementById('btn-tester-logs').addEventListener('click', () => {
+        TesterComponent.showView('logs');
     });
 
-    // Tester database navigation
     document.getElementById('btn-tester-characters').addEventListener('click', () => {
-        TesterComponent.showDataView('characters');
+        TesterComponent.showView('characters');
     });
 
     document.getElementById('btn-tester-relationships').addEventListener('click', () => {
-        TesterComponent.showDataView('relationships');
+        TesterComponent.showView('relationships');
     });
 
     document.getElementById('btn-tester-locations').addEventListener('click', () => {
-        TesterComponent.showDataView('locations');
+        TesterComponent.showView('locations');
     });
 
     document.getElementById('btn-tester-arcs').addEventListener('click', () => {
-        TesterComponent.showDataView('arcs');
+        TesterComponent.showView('arcs');
     });
 
     document.getElementById('btn-tester-flags').addEventListener('click', () => {
-        TesterComponent.showDataView('flags');
+        TesterComponent.showView('flags');
     });
 
     document.getElementById('btn-tester-scene').addEventListener('click', () => {
-        TesterComponent.showDataView('scene');
+        TesterComponent.showView('scene');
     });
 
     // Tester reset button

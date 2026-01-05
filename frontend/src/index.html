@@ -163,11 +163,16 @@
                         <div id="tester-playthrough-info" style="margin-bottom: 20px;">
                             <p>Select a playthrough first</p>
                         </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-direction: column;">
-                            <button id="btn-tester-view-database" class="tester-view-btn active">Database</button>
-                            <button id="btn-tester-view-context" class="tester-view-btn">Context Window</button>
-                        </div>
-                        <div id="tester-database-nav" style="display: flex; flex-direction: column; gap: 8px;">
+
+                        <!-- Navigation with sections -->
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <!-- Context Window Section -->
+                            <div class="tester-section-header">Context Window</div>
+                            <button id="btn-tester-context" class="tester-nav-btn">AI Context</button>
+                            <button id="btn-tester-logs" class="tester-nav-btn">Logs</button>
+
+                            <!-- Database Section -->
+                            <div class="tester-section-header" style="margin-top: 15px;">Database</div>
                             <button id="btn-tester-characters" class="tester-nav-btn active">Characters</button>
                             <button id="btn-tester-relationships" class="tester-nav-btn">Relationships</button>
                             <button id="btn-tester-locations" class="tester-nav-btn">Locations</button>
@@ -181,15 +186,8 @@
                         </div>
                     </div>
                     <div class="tester-content">
-                        <div id="tester-database-container">
-                            <div id="tester-database-view">
-                                <p>Loading...</p>
-                            </div>
-                        </div>
-                        <div id="tester-context-container" style="display: none;">
-                            <div id="tester-context-view">
-                                <p>Loading...</p>
-                            </div>
+                        <div id="tester-view-container">
+                            <p>Loading...</p>
                         </div>
                     </div>
                 </div>

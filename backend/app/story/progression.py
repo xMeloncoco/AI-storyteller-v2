@@ -222,7 +222,17 @@ JSON Response:"""
                 }
             )
 
-            result = json.loads(response)
+            # Parse response - strip markdown if present
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```"):
+                lines = cleaned_response.split('\n')
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned_response = '\n'.join(lines).strip()
+
+            result = json.loads(cleaned_response)
             flags = result.get("flags", [])
 
             self.logger.ai_decision(
