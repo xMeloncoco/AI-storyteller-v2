@@ -4,6 +4,13 @@ This guide explains how to quickly start the Dreamwalkers application for testin
 
 ## Quick Start (One Command!)
 
+### Windows
+Double-click `start-test.bat` or run from Command Prompt:
+```cmd
+start-test.bat
+```
+
+### Linux/Mac
 ```bash
 ./start-test.sh
 ```
@@ -20,8 +27,14 @@ That's it! The script will:
 
 ## Stopping the Application
 
-Press `Ctrl+C` in the terminal running `start-test.sh`, or run:
+### Windows
+Double-click `stop-test.bat` or run:
+```cmd
+stop-test.bat
+```
 
+### Linux/Mac
+Press `Ctrl+C` in the terminal running `start-test.sh`, or run:
 ```bash
 ./stop-test.sh
 ```
@@ -62,23 +75,35 @@ Press `Ctrl+C` in the terminal running `start-test.sh`, or run:
 
 ## Testing Workflow
 
-1. **Start the app**: `./start-test.sh`
+1. **Start the app**: `start-test.bat` (Windows) or `./start-test.sh` (Linux/Mac)
 2. **Load test data** when prompted (recommended: yes)
 3. **Create a playthrough**: Open the app → Stories → Select "Starling Contract" → New Playthrough
 4. **Send messages** to test the chat functionality
 5. **Open Tester Panel** (🧪 button) to view database, context, and logs
 6. **Reset playthrough** if needed via Tester Panel
-7. **Stop the app**: Press `Ctrl+C` or run `./stop-test.sh`
+7. **Stop the app**: `stop-test.bat` (Windows) or Ctrl+C / `./stop-test.sh` (Linux/Mac)
 
 ## Logs
 
-While running, you can view logs in separate terminals:
+The Windows script automatically opens log viewers in separate windows.
 
+For manual viewing:
+
+### Windows (PowerShell)
+```powershell
+Get-Content backend.log -Wait -Tail 20
+Get-Content frontend.log -Wait -Tail 20
+```
+
+### Windows (Command Prompt)
+```cmd
+type backend.log
+type frontend.log
+```
+
+### Linux/Mac
 ```bash
-# Backend logs
 tail -f backend.log
-
-# Frontend logs
 tail -f frontend.log
 ```
 
@@ -87,37 +112,71 @@ tail -f frontend.log
 ### Backend won't start
 - Check `backend.log` for errors
 - Verify `.env` file exists and has valid AI provider settings
-- Make sure port 8000 is not in use: `lsof -i :8000`
+- Make sure port 8000 is not in use:
+  - Windows: `netstat -ano | findstr :8000`
+  - Linux/Mac: `lsof -i :8000`
 
 ### Frontend won't connect
-- Ensure backend is running and healthy: `curl http://localhost:8000/health`
+- Ensure backend is running and healthy:
+  - Windows: Open `http://localhost:8000/health` in browser
+  - Linux/Mac: `curl http://localhost:8000/health`
 - Check `frontend.log` for errors
 
 ### Test data won't load
 - Make sure backend is running first
 - Check that `backend/test_data/` directory exists
-- Manually run: `cd backend && python load_test_data.py`
+- Manually run:
+  - Windows: `cd backend && venv\Scripts\activate && python load_test_data.py`
+  - Linux/Mac: `cd backend && source venv/bin/activate && python load_test_data.py`
 
 ## Manual Testing (Old Way)
 
 If you prefer to start services manually:
 
-### Terminal 1 - Backend
-```bash
+### Windows
+
+#### Terminal 1 - Backend
+```cmd
 cd backend
-source venv/bin/activate  # or: python -m venv venv && source venv/bin/activate
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
 python -m app.main
 ```
 
-### Terminal 2 - Frontend
+#### Terminal 2 - Frontend
+```cmd
+cd frontend
+npm install
+npm start
+```
+
+#### Terminal 3 - Load Test Data
+```cmd
+cd backend
+venv\Scripts\activate
+python load_test_data.py
+```
+
+### Linux/Mac
+
+#### Terminal 1 - Backend
+```bash
+cd backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python -m app.main
+```
+
+#### Terminal 2 - Frontend
 ```bash
 cd frontend
 npm install
 npm start
 ```
 
-### Terminal 3 - Load Test Data
+#### Terminal 3 - Load Test Data
 ```bash
 cd backend
 source venv/bin/activate
@@ -128,4 +187,4 @@ python load_test_data.py
 
 **Before**: 3 terminals, multiple commands, manual dependency management
 
-**Now**: 1 command, automatic setup, integrated logging
+**Now**: 1 command (or double-click on Windows), automatic setup, integrated logging
