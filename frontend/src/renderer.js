@@ -436,10 +436,6 @@ document.addEventListener('DOMContentLoaded', () => {
         TesterComponent.showView('locations');
     });
 
-    document.getElementById('btn-tester-arcs').addEventListener('click', () => {
-        TesterComponent.showView('arcs');
-    });
-
     document.getElementById('btn-tester-flags').addEventListener('click', () => {
         TesterComponent.showView('flags');
     });

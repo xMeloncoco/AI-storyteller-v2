@@ -76,6 +76,9 @@ def create_playthrough(
     # Copy template relationships to this playthrough
     _copy_template_relationships(db, playthrough.story_id, db_playthrough.id)
 
+    # Copy template locations to this playthrough
+    _copy_template_locations(db, playthrough.story_id, db_playthrough.id)
+
     # Copy template story arcs to this playthrough
     _copy_template_arcs(db, playthrough.story_id, db_playthrough.id)
 
@@ -126,6 +129,17 @@ def _copy_template_relationships(
     playthrough_id: int
 ) -> None:
     """Copy all template relationships for this story to the playthrough"""
+    # First, build a mapping from template character IDs to playthrough character IDs
+    playthrough_chars = db.query(models.Character).filter(
+        models.Character.playthrough_id == playthrough_id
+    ).all()
+
+    template_to_playthrough_map = {
+        char.template_character_id: char.id
+        for char in playthrough_chars
+        if char.template_character_id is not None
+    }
+
     templates = db.query(models.Relationship).filter(
         and_(
             models.Relationship.story_id == story_id,
@@ -134,13 +148,17 @@ def _copy_template_relationships(
     ).all()
 
     for template in templates:
+        # Map template character IDs to playthrough character IDs
+        entity1_id = template_to_playthrough_map.get(template.entity1_id, template.entity1_id)
+        entity2_id = template_to_playthrough_map.get(template.entity2_id, template.entity2_id)
+
         instance = models.Relationship(
             story_id=story_id,
             playthrough_id=playthrough_id,
             entity1_type=template.entity1_type,
-            entity1_id=template.entity1_id,
+            entity1_id=entity1_id,
             entity2_type=template.entity2_type,
-            entity2_id=template.entity2_id,
+            entity2_id=entity2_id,
             relationship_type=template.relationship_type,
             first_meeting_context=template.first_meeting_context,
             trust=template.trust,
@@ -155,6 +173,40 @@ def _copy_template_relationships(
     log_notification(
         db,
         f"Copied {len(templates)} relationship templates to playthrough",
+        "database",
+        {"playthrough_id": playthrough_id}
+    )
+
+
+def _copy_template_locations(
+    db: Session,
+    story_id: int,
+    playthrough_id: int
+) -> None:
+    """Copy all template locations for this story to the playthrough"""
+    templates = db.query(models.Location).filter(
+        and_(
+            models.Location.story_id == story_id,
+            models.Location.playthrough_id.is_(None)
+        )
+    ).all()
+
+    for template in templates:
+        instance = models.Location(
+            story_id=story_id,
+            playthrough_id=playthrough_id,
+            location_name=template.location_name,
+            description=template.description,
+            location_type=template.location_type,
+            location_scope=template.location_scope
+        )
+        db.add(instance)
+
+    db.commit()
+
+    log_notification(
+        db,
+        f"Copied {len(templates)} location templates to playthrough",
         "database",
         {"playthrough_id": playthrough_id}
     )

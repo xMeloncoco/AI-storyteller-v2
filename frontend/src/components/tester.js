@@ -298,7 +298,7 @@ const TesterComponent = {
     },
 
     /**
-     * Display current scene
+     * Display scene state (location, time, characters present, etc.)
      */
     displayCurrentScene(scene) {
         const container = document.getElementById('tester-view-container');
@@ -309,7 +309,7 @@ const TesterComponent = {
         }
 
         let html = '<div class="tester-scene-container">';
-        html += `<h4>Current Scene State</h4>`;
+        html += `<h4>Scene State</h4>`;
         html += `<p><strong>Location:</strong> ${scene.location || 'Unknown'}</p>`;
         html += `<p><strong>Time:</strong> ${scene.time_of_day || 'Unknown'}</p>`;
         if (scene.weather) html += `<p><strong>Weather:</strong> ${scene.weather}</p>`;
