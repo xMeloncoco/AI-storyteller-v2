@@ -399,15 +399,25 @@ class LLMManager:
             temperature=0.5  # More deterministic for character consistency
         )
 
-        # Parse the response - expecting JSON
+        # Parse the response - expecting JSON, strip markdown if present
         try:
-            decision = json.loads(response)
-        except json.JSONDecodeError:
+            # Remove markdown code blocks (```json ... ```)
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```"):
+                lines = cleaned_response.split('\n')
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned_response = '\n'.join(lines).strip()
+
+            decision = json.loads(cleaned_response)
+        except json.JSONDecodeError as e:
             # If not valid JSON, try to extract key information
             self.logger.error(
                 "Character decision response not valid JSON, attempting to parse",
                 "character",
-                {"raw_response": response}
+                {"raw_response": response, "error": str(e)}
             )
             decision = self._parse_decision_text(response)
 
@@ -484,14 +494,25 @@ class LLMManager:
             temperature=0.3  # Very deterministic for detection
         )
 
-        # Parse response
+        # Parse response - strip markdown code blocks if present
         try:
-            changes = json.loads(response)
-        except json.JSONDecodeError:
+            # Remove markdown code blocks (```json ... ```)
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```"):
+                # Find the start of JSON (after ```json or just ```)
+                lines = cleaned_response.split('\n')
+                if lines[0].startswith("```"):
+                    lines = lines[1:]  # Remove first line
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]  # Remove last line
+                cleaned_response = '\n'.join(lines).strip()
+
+            changes = json.loads(cleaned_response)
+        except json.JSONDecodeError as e:
             self.logger.error(
                 "Scene change detection response not valid JSON",
                 "ai",
-                {"raw_response": response}
+                {"raw_response": response, "error": str(e)}
             )
             changes = {
                 "location_changed": False,

@@ -109,6 +109,21 @@ def load_story_from_json(db, json_path: str):
 
     db.commit()
 
+    # Create location templates
+    for loc_data in data.get("locations", []):
+        location = models.Location(
+            story_id=story.id,
+            playthrough_id=None,  # Template!
+            location_name=loc_data["name"],
+            description=loc_data.get("description", ""),
+            location_type=loc_data.get("type", "place"),
+            location_scope=loc_data.get("scope", "local")
+        )
+        db.add(location)
+        print(f"    Created location template: {loc_data['name']}")
+
+    db.commit()
+
     # Create story arc templates
     for arc_data in data.get("story_arcs", []):
         arc = models.StoryArc(
@@ -135,6 +150,7 @@ def load_story_from_json(db, json_path: str):
             "story_id": story.id,
             "characters": len(char_id_map),
             "relationships": len(data.get("relationships", [])),
+            "locations": len(data.get("locations", [])),
             "arcs": len(data.get("story_arcs", []))
         }
     )
@@ -181,6 +197,7 @@ def main():
         print(f"  Loaded {len(story_ids)} stories")
         print(f"  Total characters: {db.query(models.Character).filter(models.Character.playthrough_id.is_(None)).count()}")
         print(f"  Total relationships: {db.query(models.Relationship).filter(models.Relationship.playthrough_id.is_(None)).count()}")
+        print(f"  Total locations: {db.query(models.Location).filter(models.Location.playthrough_id.is_(None)).count()}")
         print(f"  Total story arcs: {db.query(models.StoryArc).filter(models.StoryArc.playthrough_id.is_(None)).count()}")
         print("=" * 60)
 

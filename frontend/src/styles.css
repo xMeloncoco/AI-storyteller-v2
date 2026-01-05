@@ -655,6 +655,15 @@ body {
     overflow-y: auto;
 }
 
+.tester-section-header {
+    color: #9ca3af;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 10px 4px 10px;
+}
+
 .tester-view-btn,
 .tester-nav-btn {
     background-color: #1e293b;
@@ -785,4 +794,90 @@ body {
     line-height: 1.6;
     white-space: pre-wrap;
     word-wrap: break-word;
+}
+
+/* Logs Styles */
+.tester-logs-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.tester-logs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.tester-logs-header h4 {
+    color: #60a5fa;
+    margin: 0;
+}
+
+.log-group {
+    background-color: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.log-group-header {
+    color: #93c5fd;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #334155;
+}
+
+.log-entries {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.log-entry {
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 4px;
+    padding: 10px;
+    font-size: 0.9em;
+    display: grid;
+    grid-template-columns: 80px 100px 1fr;
+    gap: 10px;
+    align-items: start;
+}
+
+.log-category {
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-align: center;
+    color: white;
+}
+
+.log-type {
+    color: #9ca3af;
+    font-size: 0.9em;
+}
+
+.log-message {
+    color: #e0e0e0;
+}
+
+.log-details {
+    grid-column: 1 / -1;
+    background-color: #0d1117;
+    border: 1px solid #374151;
+    border-radius: 3px;
+    padding: 10px;
+    margin-top: 8px;
+    font-family: 'Consolas', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.85em;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #9ca3af;
 }

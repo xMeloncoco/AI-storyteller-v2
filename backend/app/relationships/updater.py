@@ -228,8 +228,17 @@ Story response excerpt: {ai_response[:500]}...
                 }
             )
 
-            # Parse the response
-            changes = json.loads(response)
+            # Parse the response - strip markdown if present
+            cleaned_response = response.strip()
+            if cleaned_response.startswith("```"):
+                lines = cleaned_response.split('\n')
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                cleaned_response = '\n'.join(lines).strip()
+
+            changes = json.loads(cleaned_response)
 
             # Apply changes
             trust_change = changes.get("trust_change", 0)
