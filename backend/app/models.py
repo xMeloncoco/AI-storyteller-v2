@@ -498,6 +498,14 @@ class MemoryFlag(Base):
     # Higher importance = more likely to be included in context
     importance = Column(Integer, default=5)
 
+    # === WITNESS TRACKING (R6 / M2.x) ===
+    # JSON list of character ids that directly witnessed this event.
+    # JSON list of character ids that were later told about it.
+    # CRUD reads still ignore these until M2.3 turns on filtering, but the
+    # columns exist so writes can start populating them right away.
+    witnesses = Column(Text)
+    told_to = Column(Text)
+
     __table_args__ = (
         Index("idx_memory_flag_playthrough", "playthrough_id"),
         Index("idx_memory_flag_importance", "importance"),
@@ -543,6 +551,13 @@ class CharacterKnowledge(Base):
     # How many times has this knowledge been referenced?
     # Frequently accessed knowledge might be more central to character
     access_count = Column(Integer, default=0)
+
+    # === WITNESS TRACKING (R6 / M2.x) ===
+    # JSON list of character ids that witnessed the event the knowledge
+    # came from (the owning character is implicitly included once writes
+    # are wired up). `told_to` covers characters told about it later.
+    witnesses = Column(Text)
+    told_to = Column(Text)
 
     __table_args__ = (
         Index("idx_knowledge_character", "character_id"),
@@ -768,6 +783,14 @@ class CharacterMemory(Base):
     # JSON array of tags for finding related memories
     # Example: ["betrayal", "trust_broken", "friendship", "violence"]
     tags = Column(Text)
+
+    # === WITNESS TRACKING (R6 / M2.x) ===
+    # JSON list of character ids that witnessed the memory.
+    # `told_to` is who was told about it later.
+    # Until M2.3 retrieval still treats memories as global; the columns
+    # let STATE_UPDATE start writing witnesses now without breaking reads.
+    witnesses = Column(Text)
+    told_to = Column(Text)
 
     # === TIMESTAMPS ===
     created_at = Column(DateTime(timezone=True), server_default=func.now())
