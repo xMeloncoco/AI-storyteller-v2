@@ -21,13 +21,74 @@ Log Categories:
 - system: General system events
 
 The logs are stored in the database and can be viewed in the frontend log viewer.
+
+Pipeline-stage tagging:
+The `pipeline_stage("STAGE_NAME")` context manager (or `@pipeline_stage_method`
+decorator) auto-tags every log line emitted inside it with the active stage.
+The stage gets written into `details["stage"]` so the tester panel can filter
+by it, and the printed console line is prefixed with `[STAGE:NAME]`. This
+lets readers see immediately which pipeline stage a log came from without
+the caller having to remember.
 """
+import contextvars
+import functools
+import inspect
 import json
+from contextlib import contextmanager
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Optional
+
 from sqlalchemy.orm import Session
 
 from ..models import Log
+
+
+# Active pipeline stage for the current task. contextvars (not threading.local)
+# because the pipeline is async and contextvars propagate through await chains.
+_current_stage: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "pipeline_stage", default=None
+)
+
+
+@contextmanager
+def pipeline_stage(stage_name: str):
+    """Tag every AppLogger call inside this block with `stage_name`.
+
+    Used by ChatPipeline methods so log readers can answer "which stage did
+    this come from?" without grepping the source.
+    """
+    token = _current_stage.set(stage_name)
+    try:
+        yield stage_name
+    finally:
+        _current_stage.reset(token)
+
+
+def pipeline_stage_method(stage_name: str):
+    """Decorator form of `pipeline_stage` for ChatPipeline methods.
+
+    Handles both sync and async methods. Wrap the whole stage body so every
+    log inside (including ones the called collaborators emit) is tagged.
+    """
+    def decorate(fn):
+        if inspect.iscoroutinefunction(fn):
+            @functools.wraps(fn)
+            async def awrapper(*args, **kwargs):
+                with pipeline_stage(stage_name):
+                    return await fn(*args, **kwargs)
+            return awrapper
+
+        @functools.wraps(fn)
+        def swrapper(*args, **kwargs):
+            with pipeline_stage(stage_name):
+                return fn(*args, **kwargs)
+        return swrapper
+    return decorate
+
+
+def get_current_stage() -> Optional[str]:
+    """Inspector for tests / debugging."""
+    return _current_stage.get()
 
 
 class AppLogger:
@@ -66,6 +127,17 @@ class AppLogger:
         Returns:
             The created Log object
         """
+        stage = _current_stage.get()
+
+        # Mix the active stage into the details payload so the tester panel
+        # can filter by it. We never overwrite an explicit caller-provided
+        # `stage` key — the explicit value wins.
+        if stage is not None:
+            if details is None:
+                details = {"stage": stage}
+            elif isinstance(details, dict) and "stage" not in details:
+                details = {**details, "stage": stage}
+
         # Convert details to JSON string if it's a dict/list
         details_str = None
         if details is not None:
@@ -88,7 +160,10 @@ class AppLogger:
 
         # Also print to console for development
         timestamp = datetime.now().strftime("%H:%M:%S")
-        print(f"[{timestamp}] [{log_type.upper()}] [{category or 'general'}] {message}")
+        stage_prefix = f" [STAGE:{stage}]" if stage else ""
+        print(
+            f"[{timestamp}] [{log_type.upper()}] [{category or 'general'}]{stage_prefix} {message}"
+        )
 
         return log_entry
 

@@ -70,6 +70,21 @@ class Settings(BaseSettings):
     max_tokens_small: int = 500
     max_tokens_large: int = 3000  # Increased from 2000 for more detailed responses
 
+    # =====================================================================
+    # Validation pipeline (Stage 7) - VALIDATION_MODE controls what the
+    # validator does when it finds an issue:
+    #   warn    - log it and return the text unchanged (current behaviour;
+    #             keep as default so M0/R4 doesn't change runtime semantics).
+    #   block   - raise 422 to the API caller with the issues listed
+    #             (useful in tests / strict mode).
+    #   repair  - regenerate once with an addendum prompt when the issue
+    #             is `controls_user`; re-validate; fall back to the
+    #             original text and log `validation.unrepairable` if the
+    #             repair pass still fails.
+    # M3 expands the set of repairable issues.
+    # =====================================================================
+    validation_mode: str = "warn"
+
     class Config:
         env_file = ".env"
         case_sensitive = False

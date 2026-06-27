@@ -1,55 +1,54 @@
 """
-Context Builder for AI Storytelling
+ContextBuilder - assembles the per-turn ContextBundle that downstream
+pipeline stages and prompt templates consume.
 
-This module is responsible for building the complete context that gets sent to the AI.
-Context includes:
-1. Story information
-2. Current scene state
-3. Characters in the scene
-4. Conversation history
-5. Relevant memories from ChromaDB
-6. Relationship information
-7. Active story arcs
+Post-R2 surface:
+- `build_bundle()` - typed ContextBundle (preferred path going forward).
+- `build_for_character(character_id)` - same bundle plus a populated
+  `target_character`. M2.3 will add witness-based filtering of memories,
+  knowledge and flags; for R2 it just attaches the character profile.
+- `build_full_context()` - DEPRECATED alias for backwards compat
+  (admin/tester panel still calls it). Will be removed once M2.3 lands.
 
-Good context = consistent and engaging story!
+The legacy concatenated string format lives in
+`pipeline/context_bundle.py:render_legacy_context()` and is byte-for-byte
+reproducible from the bundle, so the model sees the same input it did
+before R2.
 """
-import json
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.orm import Session
 
 from .. import crud, models
 from ..config import settings
+from ..pipeline.context_bundle import (
+    ActiveArcView,
+    CharacterPresenceView,
+    CharacterView,
+    ContextBundle,
+    ConversationMessageView,
+    MemoryFlagView,
+    RelationshipView,
+    SceneView,
+    StoryView,
+)
 from ..utils.logger import AppLogger
 
 
 class ContextBuilder:
-    """
-    Builds comprehensive context for AI story generation
-
-    The context is what the AI "knows" when generating responses.
-    Better context = better, more consistent responses.
-    """
+    """Assembles ContextBundle objects from the playthrough's current state."""
 
     def __init__(self, db: Session, session_id: int):
-        """
-        Initialize context builder
-
-        Args:
-            db: Database session
-            session_id: Current session ID
-        """
         self.db = db
         self.session_id = session_id
         self.logger = AppLogger(db, session_id)
 
-        # Get session information
         self.session = crud.get_session(db, session_id)
         if not self.session:
             raise ValueError(f"Session {session_id} not found")
 
         self.playthrough_id = self.session.playthrough_id
 
-        # Get playthrough and story info
         self.playthrough = crud.get_playthrough(db, self.playthrough_id)
         if not self.playthrough:
             raise ValueError(f"Playthrough {self.playthrough_id} not found")
@@ -60,215 +59,75 @@ class ContextBuilder:
 
         self.logger.context(
             f"Context builder initialized for session {session_id}",
-            "memory"
+            "memory",
         )
 
-    def build_full_context(self) -> str:
-        """
-        Build the complete context string for story generation
+    # ------------------------------------------------------------------
+    # New public surface (R2+)
+    # ------------------------------------------------------------------
 
-        This is the main method that assembles all context pieces
-        """
-        self.logger.context("Building full context", "memory")
+    def build_bundle(self) -> ContextBundle:
+        """Gather every piece of context the model and pipeline need this turn."""
+        self.logger.context("Building context bundle", "memory")
 
-        context_parts = []
-
-        # 1. Story information
-        story_context = self._get_story_context()
-        context_parts.append(f"STORY INFORMATION:\n{story_context}")
-
-        # 2. Current scene state
-        scene_context = self._get_scene_context()
-        context_parts.append(f"\nCURRENT SCENE:\n{scene_context}")
-
-        # 3. Characters in scene
-        characters_context = self._get_characters_in_scene()
-        context_parts.append(f"\nCHARACTERS PRESENT:\n{characters_context}")
-
-        # 4. Conversation history
-        history_context = self._get_conversation_history()
-        context_parts.append(f"\nRECENT CONVERSATION:\n{history_context}")
-
-        # 5. Relationship information
-        relationships_context = self._get_relationships_context()
-        if relationships_context:
-            context_parts.append(f"\nRELATIONSHIP STATUS:\n{relationships_context}")
-
-        # 6. Active story arcs (Phase 2.2)
-        arcs_context = self._get_active_arcs_context()
-        if arcs_context:
-            context_parts.append(f"\nACTIVE STORY ARCS:\n{arcs_context}")
-
-        # 7. Important memory flags (Phase 1.3)
-        memory_context = self._get_memory_flags_context()
-        if memory_context:
-            context_parts.append(f"\nIMPORTANT MEMORIES:\n{memory_context}")
-
-        full_context = "\n".join(context_parts)
+        bundle = ContextBundle(
+            story=self._collect_story(),
+            scene=self._collect_scene(),
+            characters_present=self._collect_characters_present(),
+            history=self._collect_history(),
+            relationships=self._collect_relationships(),
+            active_arcs=self._collect_active_arcs(),
+            memory_flags=self._collect_memory_flags(),
+        )
 
         self.logger.context(
-            f"Built full context",
+            "Built context bundle",
             "memory",
-            {"context_length": len(full_context), "sections": len(context_parts)}
+            {
+                "characters_present": len(bundle.characters_present),
+                "history_messages": len(bundle.history),
+                "relationships": len(bundle.relationships),
+                "active_arcs": len(bundle.active_arcs),
+                "memory_flags": len(bundle.memory_flags),
+            },
         )
 
-        return full_context
+        return bundle
 
-    def _get_story_context(self) -> str:
-        """Get basic story information"""
-        context = f"Title: {self.story.title}\n"
-        if self.story.description:
-            context += f"Description: {self.story.description}\n"
-        return context
+    def build_for_character(self, character_id: int) -> ContextBundle:
+        """Bundle plus the requested character's full profile.
 
-    def _get_scene_context(self) -> str:
-        """Get current scene state"""
-        scene_state = crud.get_current_scene_state(self.db, self.session_id)
+        R2 ships this without witness-based filtering — `CharacterMemory`,
+        `CharacterKnowledge` and `MemoryFlag` are still global. M2.3 flips
+        on filtering using the witness columns R6 adds.
+        """
+        bundle = self.build_bundle()
+        bundle.target_character = self._build_character_view(character_id)
+        return bundle
 
-        if not scene_state:
-            # No scene state yet, use playthrough defaults
-            location = self.playthrough.current_location or "Unknown location"
-            time = self.playthrough.current_time or "Unknown time"
-            return f"Location: {location}\nTime: {time}\nScene: Story beginning"
+    # ------------------------------------------------------------------
+    # Deprecated string surface (kept for admin/tester until M2.3)
+    # ------------------------------------------------------------------
 
-        context = f"Location: {scene_state.location or 'Unknown'}\n"
-        context += f"Time: {scene_state.time_of_day or 'Unknown'}\n"
+    def build_full_context(self) -> str:
+        """DEPRECATED. Use `build_bundle()`.
 
-        if scene_state.weather:
-            context += f"Weather: {scene_state.weather}\n"
+        Renders the bundle through the legacy formatter so older callers
+        (admin tester panel, etc.) keep getting the same string.
+        """
+        return self.build_bundle().to_string()
 
-        if scene_state.emotional_tone:
-            context += f"Mood: {scene_state.emotional_tone}\n"
-
-        if scene_state.scene_context:
-            context += f"Context: {scene_state.scene_context}\n"
-
-        return context
-
-    def _get_characters_in_scene(self) -> str:
-        """Get information about characters currently in the scene"""
-        scene_state = crud.get_current_scene_state(self.db, self.session_id)
-
-        if not scene_state:
-            # No scene state yet, return user character and any initial characters
-            user_char = crud.get_user_character(self.db, self.playthrough_id)
-            if user_char:
-                return f"- {user_char.character_name} (User character)\n"
-            return "- Characters not yet established\n"
-
-        # Get characters from scene_characters table
-        scene_chars = self.db.query(models.SceneCharacter).filter(
-            models.SceneCharacter.scene_state_id == scene_state.id
-        ).all()
-
-        if not scene_chars:
-            return "- No characters in scene\n"
-
-        context = ""
-        for sc in scene_chars:
-            context += f"- {sc.character_name}"
-            if sc.character_type:
-                context += f" ({sc.character_type})"
-            if sc.character_mood:
-                context += f" - Mood: {sc.character_mood}"
-            if sc.character_intent:
-                context += f" - Intent: {sc.character_intent}"
-            context += "\n"
-
-        return context
-
-    def _get_conversation_history(self) -> str:
-        """Get recent conversation history"""
-        # Get last N messages (configurable)
-        history = crud.get_conversation_history(
-            self.db,
-            self.session_id,
-            limit=settings.max_context_messages
-        )
-
-        if not history:
-            return "No conversation yet.\n"
-
-        context = ""
-        for msg in history:
-            speaker = msg.speaker_name or msg.speaker_type.upper()
-            context += f"{speaker}: {msg.message}\n\n"
-
-        return context
-
-    def _get_relationships_context(self) -> str:
-        """Get relationship information for characters in scene"""
-        user_char = crud.get_user_character(self.db, self.playthrough_id)
-
-        if not user_char:
-            return ""
-
-        relationships = crud.get_all_relationships_for_character(
-            self.db, user_char.id, self.playthrough_id
-        )
-
-        if not relationships:
-            return ""
-
-        context = ""
-        for rel in relationships:
-            # Get the other character's name
-            if rel.entity1_id == user_char.id:
-                other_char = crud.get_character(self.db, rel.entity2_id)
-            else:
-                other_char = crud.get_character(self.db, rel.entity1_id)
-
-            if other_char:
-                context += f"{other_char.character_name}:\n"
-                context += f"  Relationship: {rel.relationship_type}\n"
-                context += f"  Trust: {rel.trust:.2f}\n"
-                context += f"  Affection: {rel.affection:.2f}\n"
-                context += f"  Familiarity: {rel.familiarity:.2f}\n"
-                if rel.history_summary:
-                    context += f"  History: {rel.history_summary}\n"
-                context += "\n"
-
-        return context
-
-    def _get_active_arcs_context(self) -> str:
-        """Get active story arcs (Phase 2.2)"""
-        arcs = crud.get_active_story_arcs(self.db, self.playthrough_id)
-
-        if not arcs:
-            return ""
-
-        context = ""
-        for arc in arcs:
-            context += f"- {arc.arc_name}"
-            if arc.description:
-                context += f": {arc.description}"
-            context += "\n"
-
-        return context
-
-    def _get_memory_flags_context(self) -> str:
-        """Get important memory flags (Phase 1.3)"""
-        flags = crud.get_important_memory_flags(
-            self.db, self.playthrough_id, min_importance=7
-        )
-
-        if not flags:
-            return ""
-
-        context = ""
-        for flag in flags[:10]:  # Limit to 10 most important
-            context += f"- [{flag.flag_type}] {flag.flag_value}\n"
-
-        return context
+    # ------------------------------------------------------------------
+    # Pipeline-facing helpers that aren't part of the bundle
+    # ------------------------------------------------------------------
 
     def get_character_info(self, character_id: int) -> Dict[str, Any]:
         """
-        Get complete character information for decision making
-
-        Returns a dictionary with all relevant character data
+        Rich character info dict used by scene_simulation and per-character
+        prompt building. Returns the same shape downstream code already
+        expects; the typed CharacterView is for prompt assembly only.
         """
         character = crud.get_character(self.db, character_id)
-
         if not character:
             return {}
 
@@ -284,85 +143,76 @@ class ContextBuilder:
             "core_values": character.core_values or "",
             "core_fears": character.core_fears or "",
             "would_never_do": character.would_never_do or "",
-            "would_always_do": character.would_always_do or ""
+            "would_always_do": character.would_always_do or "",
         }
 
-        # Get character's current emotional/mental state
         char_state = crud.get_character_state(self.db, character_id, self.playthrough_id)
         if char_state:
             info["current_state"] = {
-                "emotional_state": char_state.current_emotional_state or char_state.baseline_emotional_state,
+                "emotional_state": (
+                    char_state.current_emotional_state
+                    or char_state.baseline_emotional_state
+                ),
                 "emotion_cause": char_state.emotion_cause,
                 "emotion_intensity": char_state.emotion_intensity,
                 "stress_level": char_state.stress_level,
                 "energy_level": char_state.energy_level,
                 "mental_clarity": char_state.mental_clarity,
                 "primary_concern": char_state.primary_concern,
-                "secondary_concerns": char_state.secondary_concerns
+                "secondary_concerns": char_state.secondary_concerns,
             }
         else:
             info["current_state"] = None
 
-        # Get character's active goals
         char_goals = crud.get_character_goals(self.db, character_id, self.playthrough_id)
-        if char_goals:
-            info["goals"] = [
-                {
-                    "type": goal.goal_type,
-                    "content": goal.goal_content,
-                    "priority": goal.priority,
-                    "status": goal.status
-                }
-                for goal in char_goals
-            ]
-        else:
-            info["goals"] = []
+        info["goals"] = [
+            {
+                "type": goal.goal_type,
+                "content": goal.goal_content,
+                "priority": goal.priority,
+                "status": goal.status,
+            }
+            for goal in char_goals
+        ]
 
-        # Get relationships involving this character
-        relationships = crud.get_all_relationships_for_character(
+        rel_info: List[Dict[str, Any]] = []
+        for rel in crud.get_all_relationships_for_character(
             self.db, character_id, self.playthrough_id
-        )
-
-        rel_info = []
-        for rel in relationships:
-            if rel.entity1_id == character_id:
-                other_char = crud.get_character(self.db, rel.entity2_id)
-            else:
-                other_char = crud.get_character(self.db, rel.entity1_id)
-
+        ):
+            other_char = crud.get_character(
+                self.db,
+                rel.entity2_id if rel.entity1_id == character_id else rel.entity1_id,
+            )
             if other_char:
-                rel_info.append({
-                    "with": other_char.character_name,
-                    "type": rel.relationship_type,
-                    "trust": rel.trust,
-                    "affection": rel.affection,
-                    "familiarity": rel.familiarity
-                })
-
+                rel_info.append(
+                    {
+                        "with": other_char.character_name,
+                        "type": rel.relationship_type,
+                        "trust": rel.trust,
+                        "affection": rel.affection,
+                        "familiarity": rel.familiarity,
+                    }
+                )
         info["relationships"] = rel_info
 
-        # Future: Add character knowledge (Phase 1.3+)
-        # This prevents "mind-reading"
-        info["known_facts"] = []  # To be implemented
+        # CharacterKnowledge filtering arrives with M2.3 + the M9 stack.
+        info["known_facts"] = []
 
         return info
 
     def get_all_characters_in_scene_info(self) -> List[Dict[str, Any]]:
-        """
-        Get information about all characters currently in the scene
-
-        Used for character decision layer (Phase 1.3+)
-        """
+        """Rich info for every character currently in scene (post-trigger view)."""
         scene_state = crud.get_current_scene_state(self.db, self.session_id)
-
         if not scene_state:
             return []
 
-        scene_chars = self.db.query(models.SceneCharacter).filter(
-            models.SceneCharacter.scene_state_id == scene_state.id
-        ).all()
+        scene_chars = (
+            self.db.query(models.SceneCharacter)
+            .filter(models.SceneCharacter.scene_state_id == scene_state.id)
+            .all()
+        )
 
-        chars_info = []
+        chars_info: List[Dict[str, Any]] = []
         for sc in scene_chars:
             if sc.character_id:
                 char_info = self.get_character_info(sc.character_id)
@@ -374,11 +224,11 @@ class ContextBuilder:
         return chars_info
 
     def get_story_info(self) -> Dict[str, Any]:
-        """Get story information dictionary"""
+        """Story metadata as a dict (legacy callers).  Prefer `bundle.story`."""
         return {
             "id": self.story.id,
             "title": self.story.title,
-            "description": self.story.description
+            "description": self.story.description,
         }
 
     def update_scene_state(
@@ -387,13 +237,9 @@ class ContextBuilder:
         time_of_day: Optional[str] = None,
         weather: Optional[str] = None,
         scene_context: Optional[str] = None,
-        emotional_tone: Optional[str] = None
+        emotional_tone: Optional[str] = None,
     ) -> models.SceneState:
-        """
-        Create a new scene state record
-
-        Called when scene changes are detected
-        """
+        """Create a new SceneState row (called when a scene change is detected)."""
         from .. import schemas
 
         scene_data = schemas.SceneStateCreate(
@@ -403,25 +249,181 @@ class ContextBuilder:
             time_of_day=time_of_day,
             weather=weather,
             scene_context=scene_context,
-            emotional_tone=emotional_tone
+            emotional_tone=emotional_tone,
         )
 
         scene_state = crud.create_scene_state(self.db, scene_data)
 
         self.logger.context(
-            f"Updated scene state",
+            "Updated scene state",
             "memory",
             {
                 "location": location,
                 "time": time_of_day,
-                "tone": emotional_tone
-            }
+                "tone": emotional_tone,
+            },
         )
 
-        # Also update playthrough location
         if location:
             crud.update_playthrough_location(
                 self.db, self.playthrough_id, location, time_of_day
             )
 
         return scene_state
+
+    # ------------------------------------------------------------------
+    # Internal collectors (pure data → views)
+    # ------------------------------------------------------------------
+
+    def _collect_story(self) -> StoryView:
+        return StoryView(
+            id=self.story.id,
+            title=self.story.title,
+            description=self.story.description,
+        )
+
+    def _collect_scene(self) -> SceneView:
+        scene_state = crud.get_current_scene_state(self.db, self.session_id)
+
+        if not scene_state:
+            return SceneView(
+                location=self.playthrough.current_location,
+                time_of_day=self.playthrough.current_time,
+                is_initial=True,
+            )
+
+        return SceneView(
+            location=scene_state.location,
+            time_of_day=scene_state.time_of_day,
+            weather=scene_state.weather,
+            emotional_tone=scene_state.emotional_tone,
+            scene_context=scene_state.scene_context,
+            is_initial=False,
+        )
+
+    def _collect_characters_present(self) -> List[CharacterPresenceView]:
+        """Match the legacy `_get_characters_in_scene` branching exactly.
+
+        - No scene_state, user char exists → single row for the user.
+        - No scene_state, no user char → a single placeholder row.
+        - Scene_state with no chars → empty list (renderer prints
+          "No characters in scene").
+        - Scene_state with chars → one row per SceneCharacter.
+        """
+        scene_state = crud.get_current_scene_state(self.db, self.session_id)
+
+        if not scene_state:
+            user_char = crud.get_user_character(self.db, self.playthrough_id)
+            if user_char:
+                return [
+                    CharacterPresenceView(
+                        name=user_char.character_name,
+                        character_type="User character",
+                    )
+                ]
+            return [CharacterPresenceView(name="Characters not yet established")]
+
+        scene_chars = (
+            self.db.query(models.SceneCharacter)
+            .filter(models.SceneCharacter.scene_state_id == scene_state.id)
+            .all()
+        )
+
+        return [
+            CharacterPresenceView(
+                name=sc.character_name,
+                character_type=sc.character_type,
+                mood=sc.character_mood,
+                intent=sc.character_intent,
+            )
+            for sc in scene_chars
+        ]
+
+    def _collect_history(self) -> List[ConversationMessageView]:
+        history = crud.get_conversation_history(
+            self.db,
+            self.session_id,
+            limit=settings.max_context_messages,
+        )
+
+        return [
+            ConversationMessageView(
+                speaker_label=msg.speaker_name or msg.speaker_type.upper(),
+                message=msg.message,
+            )
+            for msg in history
+        ]
+
+    def _collect_relationships(self) -> List[RelationshipView]:
+        user_char = crud.get_user_character(self.db, self.playthrough_id)
+        if not user_char:
+            return []
+
+        relationships = crud.get_all_relationships_for_character(
+            self.db, user_char.id, self.playthrough_id
+        )
+
+        views: List[RelationshipView] = []
+        for rel in relationships:
+            other_char = crud.get_character(
+                self.db,
+                rel.entity2_id if rel.entity1_id == user_char.id else rel.entity1_id,
+            )
+            if not other_char:
+                continue
+            views.append(
+                RelationshipView(
+                    other_character_name=other_char.character_name,
+                    relationship_type=rel.relationship_type,
+                    trust=rel.trust,
+                    affection=rel.affection,
+                    familiarity=rel.familiarity,
+                    history_summary=rel.history_summary,
+                )
+            )
+        return views
+
+    def _collect_active_arcs(self) -> List[ActiveArcView]:
+        arcs = crud.get_active_story_arcs(self.db, self.playthrough_id)
+        return [
+            ActiveArcView(arc_name=arc.arc_name, description=arc.description)
+            for arc in arcs
+        ]
+
+    def _collect_memory_flags(self) -> List[MemoryFlagView]:
+        # min_importance and the slice limit are still hardcoded; R5 lifts them
+        # into config.py.
+        flags = crud.get_important_memory_flags(
+            self.db, self.playthrough_id, min_importance=7
+        )
+        return [
+            MemoryFlagView(flag_type=flag.flag_type, flag_value=flag.flag_value)
+            for flag in flags[:10]
+        ]
+
+    def _build_character_view(self, character_id: int) -> Optional[CharacterView]:
+        info = self.get_character_info(character_id)
+        if not info:
+            return None
+
+        sheet_keys = (
+            "age",
+            "appearance",
+            "backstory",
+            "personality_traits",
+            "speech_patterns",
+            "core_values",
+            "core_fears",
+            "would_never_do",
+            "would_always_do",
+        )
+
+        return CharacterView(
+            id=info["id"],
+            name=info["name"],
+            character_type=info["type"],
+            sheet={key: info.get(key) for key in sheet_keys},
+            state=info.get("current_state"),
+            goals=info.get("goals", []),
+            relationships=info.get("relationships", []),
+        )
