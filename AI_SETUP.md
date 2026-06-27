@@ -1,28 +1,46 @@
-# 🤖 AI Setup Guide - Free AI Providers
+# AI Setup Guide
 
-This guide will help you set up FREE AI providers for Dreamwalkers. No credit card required!
+This guide covers configuring an AI provider for Dreamwalkers. You can use a local model (no API key) or a free hosted provider.
 
-## 🎯 Why Two Different AI Models?
+## Why Two Different AI Models?
 
-Dreamwalkers uses a **two-tier AI system** for optimal performance and cost:
+Dreamwalkers uses a **two-tier AI system**:
 
-- **Small Model** (3B parameters): Fast, lightweight AI for quick checks
-  - Character decision validation
+- **Small Model** (~3B parameters): Fast, lightweight checks
+  - Character decision analysis
   - Scene change detection
   - Flag/event checking
-  - Simple analysis tasks
 
-- **Large Model** (8B parameters): Powerful AI for story generation
-  - Main story narration
-  - Character dialogue
-  - Complex scene descriptions
+- **Large Model** (~8B+ parameters): Story generation
+  - Narration and character dialogue
+  - Scene descriptions
   - Creative responses
-
-Using small models for simple tasks makes the app faster and reduces API costs!
 
 ---
 
-## 🆓 Option 1: OpenRouter (Recommended)
+## Option 1: Local Ollama (Recommended, no API key)
+
+Runs the AI on your own machine. No keys, no rate limits, fully offline.
+
+1. Install Ollama from [ollama.com/download](https://ollama.com/download)
+2. Pull the default models:
+   ```bash
+   ollama pull llama3.2:3b
+   ollama pull llama3.2
+   ```
+3. In `backend/.env`:
+   ```bash
+   AI_PROVIDER=local
+   SMALL_MODEL=llama3.2:3b
+   LARGE_MODEL=llama3.2
+   OLLAMA_HOST=http://localhost:11434
+   ```
+
+This is the default in `backend/.env.example`.
+
+---
+
+## Option 2: OpenRouter (free tier)
 
 OpenRouter provides access to multiple AI models, including **100% free options**.
 
@@ -90,7 +108,7 @@ OpenRouter free tier includes:
 
 ---
 
-## 🌟 Option 2: Nebius AI Studio
+## Option 3: Nebius AI Studio
 
 Nebius offers free credits for AI API access.
 
@@ -135,7 +153,7 @@ MAX_TOKENS_LARGE=2000
 
 ---
 
-## 🧪 Option 3: Demo Mode (No AI Required)
+## Option 4: Demo Mode (No AI Required)
 
 Perfect for testing the app without setting up AI.
 
@@ -157,7 +175,7 @@ AI_PROVIDER=demo
 
 ---
 
-## 🔧 Verifying Your Setup
+## Verifying Your Setup
 
 ### 1. Check Configuration
 
@@ -186,14 +204,13 @@ Large Model: meta-llama/llama-3.1-8b-instruct:free
 ### 3. Try a Story
 
 1. Load test data (Settings → Load All Test Data)
-2. Select "Starling Contract" story
+2. Select any story
 3. Create a playthrough
-4. Send a message
-5. If you get a response, AI is working! 🎉
+4. Send a message - if you get a response, AI is working
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### "AI not configured" error
 
@@ -222,11 +239,10 @@ cat .env  # Check if file exists and looks correct
 
 ### Slow responses
 
-**This is normal for free tiers!**
+This is normal for free tiers:
 - Free models use shared infrastructure
 - Responses may take 10-30 seconds
-- Faster than local AI, slower than paid tiers
-- Be patient - it's free! 😊
+- Local Ollama is offline but depends on your hardware
 
 ### Rate limit errors
 
@@ -241,12 +257,11 @@ Free tiers have request limits:
 
 ---
 
-## 💡 Tips for Best Results
+## Tips for Best Results
 
-### 1. Start with OpenRouter
-- Easiest to set up
-- Most reliable free tier
-- Good model selection
+### 1. Start with Local Ollama or OpenRouter
+- Ollama: no rate limits, no key, runs offline
+- OpenRouter: easiest hosted option, generous free tier
 
 ### 2. Use Appropriate Token Limits
 ```bash
@@ -271,40 +286,22 @@ MAX_TOKENS_LARGE=2500
 
 ---
 
-## 🚀 Advanced: Local AI (Future)
-
-Want to run AI completely offline? Future versions will support:
-- **Ollama** - Run models on your PC
-- **LM Studio** - Local model management
-- No internet required!
-
-*Stay tuned for updates!*
-
----
-
-## 📞 Need Help?
+## Need Help?
 
 1. **Check Settings → System Info** in the app
 2. **View Logs** for error messages
-3. **Try Demo Mode** to verify app works
-4. **Re-read this guide** - most issues are simple config errors!
+3. **Try Demo Mode** to verify the app works without an AI provider
+4. Re-read this guide - most issues are simple config errors
 
 ---
 
-## ✅ Checklist
+## Checklist (hosted providers)
 
-Before you start:
 - [ ] Created OpenRouter or Nebius account
 - [ ] Got API key
 - [ ] Created `backend/.env` file
 - [ ] Added `AI_PROVIDER` and API key
-- [ ] Added `:free` suffix to OpenRouter models
+- [ ] Added `:free` suffix to OpenRouter models (if using OpenRouter)
 - [ ] Started backend - no errors
 - [ ] Settings → System Info shows "AI Configured: Yes"
 - [ ] Tested with a story - got AI response
-
-**All checked? You're ready to create stories! 🎉**
-
----
-
-*Last updated: 2024-11-18*

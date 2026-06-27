@@ -14,6 +14,7 @@ import json
 
 from ..database import get_db
 from .. import models, schemas
+from ..config import settings
 from ..utils.logger import log_notification, log_error
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -668,7 +669,7 @@ async def get_context_window(session_id: int, db: Session = Depends(get_db)):
             "conversation_history": conversation_history,
             "metadata": {
                 "playthrough_id": session.playthrough_id,
-                "max_context_messages": 20
+                "max_context_messages": settings.max_context_messages
             }
         }
 
@@ -839,19 +840,28 @@ async def get_session_logs_grouped(
         if current_group:
             grouped_logs.append(current_group)
 
-        # Assign logs to appropriate groups
+        # Assign each log to the single group whose user turn started it.
+        # A log belongs to the latest group whose timestamp is <= log timestamp.
         for log in logs:
-            # Find the appropriate group based on timestamp
+            if not log.timestamp:
+                continue
+
+            log_ts = log.timestamp.isoformat()
+            target_group = None
             for group in grouped_logs:
-                if log.timestamp and group["timestamp"]:
-                    if log.timestamp.isoformat() >= group["timestamp"]:
-                        group["logs"].append({
-                            "type": log.log_type,
-                            "category": log.log_category,
-                            "message": log.message,
-                            "timestamp": log.timestamp.isoformat() if log.timestamp else None,
-                            "details": log.details
-                        })
+                if group["timestamp"] and log_ts >= group["timestamp"]:
+                    target_group = group
+                else:
+                    break
+
+            if target_group is not None:
+                target_group["logs"].append({
+                    "type": log.log_type,
+                    "category": log.log_category,
+                    "message": log.message,
+                    "timestamp": log_ts,
+                    "details": log.details
+                })
 
         return {
             "session_id": session_id,

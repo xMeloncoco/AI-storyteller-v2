@@ -5,7 +5,7 @@ Create, Read, Update, Delete operations for all models
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, and_
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 
 from . import models, schemas
@@ -109,6 +109,18 @@ def _copy_template_characters(
             backstory=template.backstory,
             personality_traits=template.personality_traits,
             speech_patterns=template.speech_patterns,
+            core_values=template.core_values,
+            core_fears=template.core_fears,
+            would_never_do=template.would_never_do,
+            would_always_do=template.would_always_do,
+            comfort_behaviors=template.comfort_behaviors,
+            verbal_patterns=template.verbal_patterns,
+            sentence_structure=template.sentence_structure,
+            common_phrases=template.common_phrases,
+            decision_style=template.decision_style,
+            internal_contradiction=template.internal_contradiction,
+            secret_kept=template.secret_kept,
+            vulnerability=template.vulnerability,
             template_character_id=template.id
         )
         db.add(instance)
@@ -457,7 +469,7 @@ def update_session_activity(db: Session, session_id: int) -> None:
     """Update the last_active timestamp for a session"""
     session = get_session(db, session_id)
     if session:
-        session.last_active = datetime.utcnow()
+        session.last_active = datetime.now(timezone.utc)
         db.commit()
 
 
@@ -669,7 +681,7 @@ def update_relationship(
         if value is not None:
             setattr(relationship, key, value)
 
-    relationship.last_interaction = datetime.utcnow()
+    relationship.last_interaction = datetime.now(timezone.utc)
     db.commit()
     db.refresh(relationship)
 

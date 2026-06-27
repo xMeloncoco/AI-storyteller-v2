@@ -183,8 +183,3 @@ source venv/bin/activate
 python load_test_data.py
 ```
 
-## What's Different?
-
-**Before**: 3 terminals, multiple commands, manual dependency management
-
-**Now**: 1 command (or double-click on Windows), automatic setup, integrated logging
