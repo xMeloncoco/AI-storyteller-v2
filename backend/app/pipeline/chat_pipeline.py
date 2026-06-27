@@ -10,7 +10,7 @@ same inputs produce the same logs and the same outputs. Future refactors
 (R3/R4 and M1+) will tag log lines per stage and give the validator teeth.
 """
 from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -20,10 +20,17 @@ from ..ai.context_builder import ContextBuilder
 from ..ai.llm_manager import LLMManager
 from ..ai.prompts import PromptTemplates
 from ..ai.validator import ContentValidator
+from ..config import settings
 from ..relationships.updater import RelationshipUpdater
 from ..story.progression import StoryProgressionManager
 from ..utils.logger import AppLogger, log_error, pipeline_stage, pipeline_stage_method
 from .context_bundle import ContextBundle
+
+
+# How many characters of the offending text to quote back to the model in
+# the repair addendum. M3.3 will replace this with the actual offending
+# span identified by the AI critic.
+_REPAIR_QUOTE_CHARS = 300
 
 
 # Narrator system prompts kept as constants so they're easy to find/edit.
@@ -57,9 +64,16 @@ class TriggerResult:
 
 @dataclass
 class ValidationResult:
-    """VALIDATION stage output."""
+    """VALIDATION stage output.
+
+    `final_text` is the text the pipeline should present — either the
+    original generation, the repaired one, or (on unrepairable failure)
+    the original again as a fallback.
+    """
     is_valid: bool
     issues: List[str]
+    final_text: str
+    repaired: bool = False
 
 
 @dataclass
@@ -120,10 +134,16 @@ class ChatPipeline:
         rich_characters = self._gather_rich_characters_in_scene()
         decisions = await self.scene_simulation(bundle, rich_characters, user_message)
         generated_text = await self.generate(bundle, user_message, decisions)
-        validation = self.validate(generated_text, decisions)
-        ai_conversation = self.present(generated_text)
+        validation = await self.validate(
+            bundle, user_message, decisions, generated_text
+        )
+        # In `repair` mode the validator may have substituted a regenerated
+        # text; everywhere downstream uses validation.final_text so we present
+        # and persist exactly what passed (or what we fell back to).
+        final_text = validation.final_text
+        ai_conversation = self.present(final_text)
         state_update = await self.state_update(
-            user_message, generated_text, decisions
+            user_message, final_text, decisions
         )
 
         with pipeline_stage("PIPELINE"):
@@ -131,7 +151,7 @@ class ChatPipeline:
             crud.update_session_activity(self.db, self.session_id)
 
             response = self._build_response(
-                generated_text=generated_text,
+                generated_text=final_text,
                 ai_conversation=ai_conversation,
                 rich_characters=rich_characters,
                 state_update=state_update,
@@ -142,9 +162,9 @@ class ChatPipeline:
                 "system",
             )
 
-        # Reference unused locals to make intent obvious; intake/trigger/validation
+        # Reference unused locals to make intent obvious; intake/trigger
         # carry data future stages will need but the response shape doesn't.
-        _ = (intake, trigger, validation)
+        _ = (intake, trigger, validation, generated_text)
 
         return response
 
@@ -343,12 +363,16 @@ class ChatPipeline:
         bundle: ContextBundle,
         user_message: str,
         character_decisions: List[Dict[str, Any]],
+        addendum: Optional[str] = None,
     ) -> str:
         """Stage 6 - the big-model story generation call.
 
         The prompt template now accepts the typed bundle directly and
         decides how it gets rendered (single source of truth for what
         the model sees).
+
+        `addendum`, when set, is appended to the story prompt; the validator
+        uses this for repair regeneration so the model sees what NOT to do.
         """
         story_info = {
             "id": bundle.story.id,
@@ -362,6 +386,7 @@ class ChatPipeline:
             {
                 "story_title": bundle.story.title,
                 "num_character_decisions": len(character_decisions),
+                "has_addendum": bool(addendum),
             },
         )
 
@@ -371,6 +396,8 @@ class ChatPipeline:
             character_decisions,
             story_info,
         )
+        if addendum:
+            story_prompt = f"{story_prompt}\n\n{addendum}"
 
         self.logger.context(
             "FULL STORY PROMPT (what AI sees)",
@@ -407,32 +434,178 @@ class ChatPipeline:
         return generated_response
 
     @pipeline_stage_method("VALIDATION")
-    def validate(
+    async def validate(
         self,
-        generated_text: str,
+        bundle: ContextBundle,
+        user_message: str,
         character_decisions: List[Dict[str, Any]],
+        generated_text: str,
     ) -> ValidationResult:
-        """Stage 7 - currently warn-only. R4 promotes this to repair/block."""
+        """Stage 7 - decide what to do about validator findings.
+
+        Behavior is controlled by `settings.validation_mode`:
+
+        - `warn` (default): log issues with `validation.warned`, return the
+          original text. Preserves prior behavior.
+        - `block`: raise HTTP 422 with the issues listed (test/strict mode).
+        - `repair`: if a `controls_user` issue is present, regenerate once
+          with an addendum that quotes the offending text and tells the
+          model not to write the user character. Re-validate; if it still
+          fails, log `validation.unrepairable` and fall back to the
+          original. Other issue types fall through to warn semantics
+          until M3 expands the repair strategies.
+        """
         validator = ContentValidator(self.db, self.session_id)
         user_character = crud.get_user_character(self.db, self.playthrough_id)
         user_char_id = user_character.id if user_character else None
+        user_char_name = user_character.character_name if user_character else None
 
-        is_valid, validation_issues = validator.validate_generated_content(
+        is_valid, issues = validator.validate_generated_content(
             generated_text,
             character_decisions,
             user_char_id,
         )
 
-        if not is_valid:
-            self.logger.warning(
-                f"Generated content failed validation. Issues: {', '.join(validation_issues)}",
-                "validation",
-                {"issues": validation_issues, "content": generated_text[:500]},
-            )
-            # Same as the old comment: don't block the story yet. R4 wires
-            # repair/block behind VALIDATION_MODE.
+        mode = (settings.validation_mode or "warn").lower()
 
-        return ValidationResult(is_valid=is_valid, issues=validation_issues)
+        if is_valid:
+            self.logger.context(
+                "validation.passed",
+                "validation",
+                {"mode": mode, "text_length": len(generated_text)},
+            )
+            return ValidationResult(
+                is_valid=True,
+                issues=[],
+                final_text=generated_text,
+            )
+
+        if mode == "block":
+            self.logger.error(
+                "validation.blocked",
+                "validation",
+                {"issues": issues, "content_preview": generated_text[:500]},
+            )
+            raise HTTPException(
+                status_code=422,
+                detail={"validation_issues": issues},
+            )
+
+        controls_user = self._has_controls_user_issue(issues)
+
+        if mode == "repair" and controls_user and user_char_name:
+            return await self._attempt_repair(
+                bundle=bundle,
+                user_message=user_message,
+                character_decisions=character_decisions,
+                original_text=generated_text,
+                original_issues=issues,
+                user_char_id=user_char_id,
+                user_char_name=user_char_name,
+                validator=validator,
+            )
+
+        # `warn` (or `repair` with no repair strategy yet): keep going with
+        # the original text and surface the issues in logs.
+        self.logger.warning(
+            f"validation.warned: {', '.join(issues)}",
+            "validation",
+            {
+                "mode": mode,
+                "issues": issues,
+                "content_preview": generated_text[:500],
+            },
+        )
+        return ValidationResult(
+            is_valid=False,
+            issues=issues,
+            final_text=generated_text,
+        )
+
+    @staticmethod
+    def _has_controls_user_issue(issues: List[str]) -> bool:
+        """True if any issue is the validator's user-character-control finding."""
+        return any("control user character" in i.lower() for i in issues)
+
+    async def _attempt_repair(
+        self,
+        *,
+        bundle: ContextBundle,
+        user_message: str,
+        character_decisions: List[Dict[str, Any]],
+        original_text: str,
+        original_issues: List[str],
+        user_char_id: int,
+        user_char_name: str,
+        validator: ContentValidator,
+    ) -> ValidationResult:
+        """Regenerate once with an anti-control addendum, re-validate, log result."""
+        self.logger.notification(
+            "validation.repair_attempt",
+            "validation",
+            {
+                "user_character": user_char_name,
+                "original_issues": original_issues,
+            },
+        )
+
+        quoted = original_text[:_REPAIR_QUOTE_CHARS]
+        if len(original_text) > _REPAIR_QUOTE_CHARS:
+            quoted += "..."
+
+        addendum = (
+            f"You previously wrote:\n\"{quoted}\"\n\n"
+            f"Do not write or imply what {user_char_name} (the user's character) "
+            f"says, thinks, or does. Rewrite the response without that — narrate "
+            f"only the NPCs and the environment."
+        )
+
+        repaired_text = await self.generate(
+            bundle,
+            user_message,
+            character_decisions,
+            addendum=addendum,
+        )
+
+        is_valid, issues = validator.validate_generated_content(
+            repaired_text,
+            character_decisions,
+            user_char_id,
+        )
+
+        if is_valid:
+            self.logger.notification(
+                "validation.repaired",
+                "validation",
+                {
+                    "original_issues": original_issues,
+                    "repaired_text_preview": repaired_text[:500],
+                },
+            )
+            return ValidationResult(
+                is_valid=True,
+                issues=[],
+                final_text=repaired_text,
+                repaired=True,
+            )
+
+        # Repair didn't take. Fall back to the original (matches the prior
+        # warn-only behavior) and surface the failure loudly.
+        self.logger.error(
+            "validation.unrepairable",
+            "validation",
+            {
+                "original_issues": original_issues,
+                "remaining_issues": issues,
+                "falling_back": "original",
+                "repaired_text_preview": repaired_text[:500],
+            },
+        )
+        return ValidationResult(
+            is_valid=False,
+            issues=issues,
+            final_text=original_text,
+        )
 
     @pipeline_stage_method("PRESENTATION")
     def present(self, generated_text: str) -> models.Conversation:
