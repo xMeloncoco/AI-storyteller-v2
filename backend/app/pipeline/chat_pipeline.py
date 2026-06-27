@@ -7,8 +7,7 @@ generate_more()) and shape the response.
 
 Behavior is intentionally preserved from the prior monolithic chat.py:
 same inputs produce the same logs and the same outputs. Future refactors
-(R2/R3/R4 and M1+) will sharpen the stage signatures, swap concatenated
-context strings for typed bundles, and give the validator teeth.
+(R3/R4 and M1+) will tag log lines per stage and give the validator teeth.
 """
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
@@ -24,6 +23,7 @@ from ..ai.validator import ContentValidator
 from ..relationships.updater import RelationshipUpdater
 from ..story.progression import StoryProgressionManager
 from ..utils.logger import AppLogger, log_error
+from .context_bundle import ContextBundle
 
 
 # Narrator system prompts kept as constants so they're easy to find/edit.
@@ -53,22 +53,6 @@ class IntakeResult:
 class TriggerResult:
     """TRIGGER_DETECTION stage output - detected scene changes (applied here for now)."""
     scene_changes: Dict[str, Any]
-
-
-@dataclass
-class ContextBundle:
-    """
-    CONTEXT_GATHERING stage output.
-
-    Currently a thin wrapper around the legacy concatenated string. R2 will
-    replace `full_context` with structured per-character views; until then
-    the rest of the pipeline keeps consuming the string as before.
-    """
-    full_context: str
-    story_info: Dict[str, Any] = field(default_factory=dict)
-    # `characters_in_scene` is populated *after* trigger_detection has had a
-    # chance to apply scene changes, matching the prior behavior exactly.
-    characters_in_scene: List[Dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass
@@ -127,11 +111,14 @@ class ChatPipeline:
         )
 
         intake = self.intake(user_message)
-        context = self.context_gather()
-        trigger = await self.trigger_detection(context, user_message)
-        self._populate_characters_in_scene(context)
-        decisions = await self.scene_simulation(context, user_message)
-        generated_text = await self.generate(context, user_message, decisions)
+        bundle = self.context_gather()
+        trigger = await self.trigger_detection(bundle, user_message)
+        # `bundle` is captured pre-scene-change; rich character info is
+        # re-queried post-scene-change for simulation + response shaping
+        # (matches the prior handler's ordering exactly).
+        rich_characters = self._gather_rich_characters_in_scene()
+        decisions = await self.scene_simulation(bundle, rich_characters, user_message)
+        generated_text = await self.generate(bundle, user_message, decisions)
         validation = self.validate(generated_text, decisions)
         ai_conversation = self.present(generated_text)
         state_update = await self.state_update(
@@ -144,7 +131,7 @@ class ChatPipeline:
         response = self._build_response(
             generated_text=generated_text,
             ai_conversation=ai_conversation,
-            characters_in_scene=context.characters_in_scene,
+            rich_characters=rich_characters,
             state_update=state_update,
         )
 
@@ -166,14 +153,14 @@ class ChatPipeline:
             "system",
         )
 
-        full_context = self.context_builder.build_full_context()
-        characters_in_scene = self.context_builder.get_all_characters_in_scene_info()
+        bundle = self.context_builder.build_bundle()
+        rich_characters = self.context_builder.get_all_characters_in_scene_info()
         last_narrative = self._get_last_narrative()
 
         prompt = PromptTemplates.generate_more_prompt(
-            full_context,
+            bundle.to_string(),
             last_narrative,
-            characters_in_scene,
+            rich_characters,
         )
 
         generated_response = await self.llm_manager.generate_text(
@@ -224,38 +211,36 @@ class ChatPipeline:
         return IntakeResult(user_conversation=user_conversation, raw_message=user_message)
 
     def context_gather(self) -> ContextBundle:
-        """Stage 3 - capture the context snapshot used by every later stage.
+        """Stage 3 - capture the structured bundle every later stage reads.
 
-        Built once per turn so that detection, simulation and generation all
-        see the same scene state. Characters-in-scene is populated *after*
-        trigger_detection (the old handler did the same).
+        Built once per turn so that detection and generation see the same
+        scene state. Rich character info is queried separately after
+        trigger_detection to keep behavior aligned with the prior handler.
         """
         self.logger.context(
             "Building full context for AI...",
             "memory",
         )
 
-        full_context = self.context_builder.build_full_context()
+        bundle = self.context_builder.build_bundle()
+        rendered = bundle.to_string()
 
         self.logger.context(
             "FULL CONTEXT BUILT",
             "memory",
             {
-                "context_length": len(full_context),
+                "context_length": len(rendered),
                 "context_preview": (
-                    full_context[:1000] + "..." if len(full_context) > 1000 else full_context
+                    rendered[:1000] + "..." if len(rendered) > 1000 else rendered
                 ),
             },
         )
 
-        return ContextBundle(
-            full_context=full_context,
-            story_info=self.context_builder.get_story_info(),
-        )
+        return bundle
 
     async def trigger_detection(
         self,
-        context: ContextBundle,
+        bundle: ContextBundle,
         user_message: str,
     ) -> TriggerResult:
         """Stage 2 - detect (and apply) scene changes against the snapshot."""
@@ -265,7 +250,7 @@ class ChatPipeline:
         )
 
         scene_changes = await self.llm_manager.detect_scene_changes(
-            context.full_context,
+            bundle.to_string(),
             user_message,
         )
 
@@ -294,13 +279,15 @@ class ChatPipeline:
 
     async def scene_simulation(
         self,
-        context: ContextBundle,
+        bundle: ContextBundle,
+        rich_characters: List[Dict[str, Any]],
         user_message: str,
     ) -> List[Dict[str, Any]]:
         """Stage 4 - ask each NPC what they'd do this turn."""
         character_decisions: List[Dict[str, Any]] = []
+        context_text = bundle.to_string()
 
-        for char_info in context.characters_in_scene:
+        for char_info in rich_characters:
             if char_info.get("type") == "User":
                 self.logger.notification(
                     f"Skipping user character: {char_info.get('name')}",
@@ -321,7 +308,7 @@ class ChatPipeline:
 
             decision = await self.llm_manager.analyze_character_decision(
                 char_info,
-                context.full_context,
+                context_text,
                 user_message,
             )
             decision["character_name"] = char_info.get("name")
@@ -345,25 +332,36 @@ class ChatPipeline:
 
     async def generate(
         self,
-        context: ContextBundle,
+        bundle: ContextBundle,
         user_message: str,
         character_decisions: List[Dict[str, Any]],
     ) -> str:
-        """Stage 6 - the big-model story generation call."""
+        """Stage 6 - the big-model story generation call.
+
+        The prompt template now accepts the typed bundle directly and
+        decides how it gets rendered (single source of truth for what
+        the model sees).
+        """
+        story_info = {
+            "id": bundle.story.id,
+            "title": bundle.story.title,
+            "description": bundle.story.description,
+        }
+
         self.logger.ai_decision(
             "Building story generation prompt...",
             "ai",
             {
-                "story_title": context.story_info.get("title"),
+                "story_title": bundle.story.title,
                 "num_character_decisions": len(character_decisions),
             },
         )
 
         story_prompt = PromptTemplates.story_generation_prompt(
-            context.full_context,
+            bundle,
             user_message,
             character_decisions,
-            context.story_info,
+            story_info,
         )
 
         self.logger.context(
@@ -485,23 +483,21 @@ class ChatPipeline:
     # Helpers
     # ------------------------------------------------------------------
 
-    def _populate_characters_in_scene(self, context: ContextBundle) -> None:
-        """Fill in `context.characters_in_scene` after trigger_detection has run.
-
-        The old handler queried scene characters here (after any scene change
-        was applied), so we keep that ordering.
-        """
-        context.characters_in_scene = self.context_builder.get_all_characters_in_scene_info()
+    def _gather_rich_characters_in_scene(self) -> List[Dict[str, Any]]:
+        """Re-query characters after trigger_detection so simulation sees the post-change set."""
+        rich_characters = self.context_builder.get_all_characters_in_scene_info()
 
         self.logger.context(
-            f"Characters in scene: {len(context.characters_in_scene)}",
+            f"Characters in scene: {len(rich_characters)}",
             "character",
             {
                 "characters": [
-                    c.get("name", "Unknown") for c in context.characters_in_scene
+                    c.get("name", "Unknown") for c in rich_characters
                 ]
             },
         )
+
+        return rich_characters
 
     def _get_last_narrative(self) -> str:
         """Most recent narrator message - used to seed generate_more."""
@@ -516,7 +512,7 @@ class ChatPipeline:
         *,
         generated_text: str,
         ai_conversation: models.Conversation,
-        characters_in_scene: List[Dict[str, Any]],
+        rich_characters: List[Dict[str, Any]],
         state_update: StateUpdateSummary,
     ) -> schemas.ChatResponse:
         chars_in_scene = [
@@ -528,7 +524,7 @@ class ChatPipeline:
                 intent=c.get("intent"),
                 position=c.get("position"),
             )
-            for c in characters_in_scene
+            for c in rich_characters
         ]
 
         current_scene = crud.get_current_scene_state(self.db, self.session_id)

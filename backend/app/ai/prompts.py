@@ -9,7 +9,9 @@ This makes it easy to:
 
 Important: Good prompts are crucial for AI consistency and quality!
 """
-from typing import Dict, Any, List
+from typing import Any, Dict, List, Union
+
+from ..pipeline.context_bundle import ContextBundle, render_legacy_context
 
 
 class PromptTemplates:
@@ -20,25 +22,25 @@ class PromptTemplates:
 
     @staticmethod
     def story_generation_prompt(
-        context: str,
+        context: Union[ContextBundle, str],
         user_action: str,
         character_decisions: List[Dict[str, Any]],
-        story_info: Dict[str, Any]
+        story_info: Dict[str, Any],
     ) -> str:
         """
-        Main story generation prompt
+        Main story generation prompt.
 
-        This is used to generate the narrative response after:
-        1. Context has been built
-        2. Character decisions have been analyzed
-        3. Scene state has been updated
-
-        Args:
-            context: Full context including scene, history, characters
-            user_action: What the user did/said
-            character_decisions: Decisions from each character in the scene
-            story_info: Information about the story (title, arc, etc.)
+        Post-R2: the canonical input is a ContextBundle and the template
+        decides how the context section is rendered (single source of
+        truth for "what the model sees"). The legacy string form is still
+        accepted so older call sites don't break in lockstep — it will be
+        removed once M2.3 lands.
         """
+        if isinstance(context, ContextBundle):
+            context_text = render_legacy_context(context)
+        else:
+            context_text = context
+
         # Build character decision summaries
         decision_text = ""
         for decision in character_decisions:
@@ -60,7 +62,7 @@ class PromptTemplates:
         prompt = f"""You are the narrator of an interactive story called "{story_info.get('title', 'Story')}".
 
 CURRENT CONTEXT:
-{context}
+{context_text}
 
 CHARACTER DECISIONS (what each character has decided to do):
 {decision_text}
