@@ -22,7 +22,7 @@ from ..ai.prompts import PromptTemplates
 from ..ai.validator import ContentValidator
 from ..relationships.updater import RelationshipUpdater
 from ..story.progression import StoryProgressionManager
-from ..utils.logger import AppLogger, log_error
+from ..utils.logger import AppLogger, log_error, pipeline_stage, pipeline_stage_method
 from .context_bundle import ContextBundle
 
 
@@ -100,15 +100,16 @@ class ChatPipeline:
 
     async def run(self, user_message: str) -> schemas.ChatResponse:
         """Run the full per-turn pipeline and return the chat response."""
-        self.logger.notification(
-            "=== STARTING CHAT PROCESSING ===",
-            "system",
-            {
-                "session_id": self.session_id,
-                "playthrough_id": self.playthrough_id,
-                "user_message": user_message,
-            },
-        )
+        with pipeline_stage("PIPELINE"):
+            self.logger.notification(
+                "=== STARTING CHAT PROCESSING ===",
+                "system",
+                {
+                    "session_id": self.session_id,
+                    "playthrough_id": self.playthrough_id,
+                    "user_message": user_message,
+                },
+            )
 
         intake = self.intake(user_message)
         bundle = self.context_gather()
@@ -125,20 +126,21 @@ class ChatPipeline:
             user_message, generated_text, decisions
         )
 
-        # Touch session activity (was step 10 in the old handler).
-        crud.update_session_activity(self.db, self.session_id)
+        with pipeline_stage("PIPELINE"):
+            # Touch session activity (was step 10 in the old handler).
+            crud.update_session_activity(self.db, self.session_id)
 
-        response = self._build_response(
-            generated_text=generated_text,
-            ai_conversation=ai_conversation,
-            rich_characters=rich_characters,
-            state_update=state_update,
-        )
+            response = self._build_response(
+                generated_text=generated_text,
+                ai_conversation=ai_conversation,
+                rich_characters=rich_characters,
+                state_update=state_update,
+            )
 
-        self.logger.notification(
-            "Chat response completed successfully",
-            "system",
-        )
+            self.logger.notification(
+                "Chat response completed successfully",
+                "system",
+            )
 
         # Reference unused locals to make intent obvious; intake/trigger/validation
         # carry data future stages will need but the response shape doesn't.
@@ -146,6 +148,7 @@ class ChatPipeline:
 
         return response
 
+    @pipeline_stage_method("GENERATE_MORE")
     async def generate_more(self) -> schemas.ChatResponse:
         """Continuation path: no user message, just push the story along."""
         self.logger.notification(
@@ -189,6 +192,7 @@ class ChatPipeline:
     # Stage methods (one per PIPELINE_STAGES.md entry)
     # ------------------------------------------------------------------
 
+    @pipeline_stage_method("INTAKE")
     def intake(self, user_message: str) -> IntakeResult:
         """Stage 1 - persist the user's raw input."""
         user_conversation = crud.create_conversation(
@@ -210,6 +214,7 @@ class ChatPipeline:
 
         return IntakeResult(user_conversation=user_conversation, raw_message=user_message)
 
+    @pipeline_stage_method("CONTEXT")
     def context_gather(self) -> ContextBundle:
         """Stage 3 - capture the structured bundle every later stage reads.
 
@@ -238,6 +243,7 @@ class ChatPipeline:
 
         return bundle
 
+    @pipeline_stage_method("TRIGGER")
     async def trigger_detection(
         self,
         bundle: ContextBundle,
@@ -277,6 +283,7 @@ class ChatPipeline:
 
         return TriggerResult(scene_changes=scene_changes)
 
+    @pipeline_stage_method("SCENE_SIMULATION")
     async def scene_simulation(
         self,
         bundle: ContextBundle,
@@ -330,6 +337,7 @@ class ChatPipeline:
 
         return character_decisions
 
+    @pipeline_stage_method("GENERATION")
     async def generate(
         self,
         bundle: ContextBundle,
@@ -398,6 +406,7 @@ class ChatPipeline:
 
         return generated_response
 
+    @pipeline_stage_method("VALIDATION")
     def validate(
         self,
         generated_text: str,
@@ -425,6 +434,7 @@ class ChatPipeline:
 
         return ValidationResult(is_valid=is_valid, issues=validation_issues)
 
+    @pipeline_stage_method("PRESENTATION")
     def present(self, generated_text: str) -> models.Conversation:
         """Stage 8 - persist the narrator row."""
         return crud.create_conversation(
@@ -438,6 +448,7 @@ class ChatPipeline:
             ),
         )
 
+    @pipeline_stage_method("STATE_UPDATE")
     async def state_update(
         self,
         user_message: str,
@@ -483,6 +494,7 @@ class ChatPipeline:
     # Helpers
     # ------------------------------------------------------------------
 
+    @pipeline_stage_method("CONTEXT")
     def _gather_rich_characters_in_scene(self) -> List[Dict[str, Any]]:
         """Re-query characters after trigger_detection so simulation sees the post-change set."""
         rich_characters = self.context_builder.get_all_characters_in_scene_info()

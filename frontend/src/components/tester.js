@@ -383,50 +383,123 @@ const TesterComponent = {
         try {
             const data = await getGroupedLogs(this.currentSession);
 
-            let html = '<div class="tester-logs-container">';
-            html += `<div class="tester-logs-header">`;
-            html += `<h4>Session Logs (${data.total_logs} entries)</h4>`;
-            html += `<button id="btn-export-logs" class="secondary-btn">Export Logs</button>`;
-            html += `</div>`;
-
-            if (data.grouped_logs && data.grouped_logs.length > 0) {
+            // Pre-decode the JSON `details` string once per log so we can read
+            // the `stage` field for filtering without re-parsing on every render.
+            const stagesPresent = new Set();
+            if (data.grouped_logs) {
                 for (const group of data.grouped_logs) {
-                    html += `<div class="log-group">`;
-                    html += `<div class="log-group-header">`;
-                    html += `<strong>User:</strong> ${group.user_message.substring(0, 100)}${group.user_message.length > 100 ? '...' : ''}`;
-                    html += `</div>`;
-
-                    if (group.logs && group.logs.length > 0) {
-                        html += `<div class="log-entries">`;
-                        for (const log of group.logs) {
-                            const categoryColor = this.getLogCategoryColor(log.category);
-                            html += `<div class="log-entry">`;
-                            html += `<span class="log-category" style="background-color: ${categoryColor};">${log.category}</span>`;
-                            html += `<span class="log-type">${log.type}</span>`;
-                            html += `<span class="log-message">${log.message}</span>`;
-                            if (log.details) {
-                                html += `<pre class="log-details">${JSON.stringify(log.details, null, 2)}</pre>`;
-                            }
-                            html += `</div>`;
-                        }
-                        html += `</div>`;
+                    if (!group.logs) continue;
+                    for (const log of group.logs) {
+                        log._parsedDetails = this.parseLogDetails(log.details);
+                        const stage = log._parsedDetails && log._parsedDetails.stage;
+                        if (stage) stagesPresent.add(stage);
                     }
-                    html += `</div>`;
                 }
-            } else {
-                html += '<p style="color: #9ca3af;">No logs found for this session.</p>';
             }
+            this._logsData = data;
+            this._stagesPresent = Array.from(stagesPresent).sort();
+            this._activeStageFilter = this._activeStageFilter || '';
 
-            html += '</div>';
-            container.innerHTML = html;
-
-            // Attach export event listener
-            document.getElementById('btn-export-logs')?.addEventListener('click', () => this.exportLogs(data));
+            this.renderLogsView();
 
         } catch (error) {
             const errorMsg = error.message || error.toString() || 'Unknown error occurred';
             console.error('Error loading logs:', error);
             container.innerHTML = `<p style="color: #ef4444;">Error loading logs: ${errorMsg}</p>`;
+        }
+    },
+
+    /**
+     * Render the logs view using whatever filter is currently active.
+     * Split out from loadLogsView so the stage dropdown can re-render without
+     * a network call.
+     */
+    renderLogsView() {
+        const container = document.getElementById('tester-view-container');
+        const data = this._logsData;
+        if (!data) return;
+
+        const stageOptions = [
+            `<option value="">All stages</option>`,
+            ...this._stagesPresent.map(s =>
+                `<option value="${s}" ${s === this._activeStageFilter ? 'selected' : ''}>${s}</option>`
+            )
+        ].join('');
+
+        let html = '<div class="tester-logs-container">';
+        html += `<div class="tester-logs-header">`;
+        html += `<h4>Session Logs (${data.total_logs} entries)</h4>`;
+        html += `<label style="margin-left: 16px;">Stage: `;
+        html += `<select id="tester-log-stage-filter">${stageOptions}</select></label>`;
+        html += `<button id="btn-export-logs" class="secondary-btn">Export Logs</button>`;
+        html += `</div>`;
+
+        if (data.grouped_logs && data.grouped_logs.length > 0) {
+            for (const group of data.grouped_logs) {
+                const visibleLogs = (group.logs || []).filter(log =>
+                    !this._activeStageFilter ||
+                    (log._parsedDetails && log._parsedDetails.stage === this._activeStageFilter)
+                );
+
+                // Skip groups with no visible logs when a stage filter is active
+                // so the user only sees turns that contain matching entries.
+                if (this._activeStageFilter && visibleLogs.length === 0) continue;
+
+                html += `<div class="log-group">`;
+                html += `<div class="log-group-header">`;
+                html += `<strong>User:</strong> ${group.user_message.substring(0, 100)}${group.user_message.length > 100 ? '...' : ''}`;
+                html += `</div>`;
+
+                if (visibleLogs.length > 0) {
+                    html += `<div class="log-entries">`;
+                    for (const log of visibleLogs) {
+                        const categoryColor = this.getLogCategoryColor(log.category);
+                        const stage = log._parsedDetails && log._parsedDetails.stage;
+                        html += `<div class="log-entry">`;
+                        html += `<span class="log-category" style="background-color: ${categoryColor};">${log.category}</span>`;
+                        html += `<span class="log-type">${log.type}</span>`;
+                        html += `<span class="log-message">`;
+                        if (stage) {
+                            html += `<span class="log-stage">[STAGE:${stage}]</span>`;
+                        }
+                        html += `${log.message}</span>`;
+                        if (log.details) {
+                            const detailsText = log._parsedDetails
+                                ? JSON.stringify(log._parsedDetails, null, 2)
+                                : log.details;
+                            html += `<pre class="log-details">${detailsText}</pre>`;
+                        }
+                        html += `</div>`;
+                    }
+                    html += `</div>`;
+                }
+                html += `</div>`;
+            }
+        } else {
+            html += '<p style="color: #9ca3af;">No logs found for this session.</p>';
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+
+        document.getElementById('btn-export-logs')?.addEventListener('click', () => this.exportLogs(data));
+        document.getElementById('tester-log-stage-filter')?.addEventListener('change', (e) => {
+            this._activeStageFilter = e.target.value;
+            this.renderLogsView();
+        });
+    },
+
+    /**
+     * The backend ships log.details as a JSON string (or null). Return the
+     * decoded object, or null if it isn't JSON / wasn't present.
+     */
+    parseLogDetails(raw) {
+        if (raw == null) return null;
+        if (typeof raw === 'object') return raw;
+        try {
+            return JSON.parse(raw);
+        } catch (e) {
+            return null;
         }
     },
 
