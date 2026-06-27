@@ -70,6 +70,55 @@ class Settings(BaseSettings):
     max_tokens_small: int = 500
     max_tokens_large: int = 3000  # Increased from 2000 for more detailed responses
 
+    # Token budget for the GENERATE_MORE continuation path. Kept smaller
+    # than max_tokens_large because continuations are meant to nudge the
+    # story along, not produce a full beat. Raise if continuations feel
+    # truncated; lower if they overshoot user agency.
+    generate_more_max_tokens: int = 1000
+
+    # =====================================================================
+    # CONTEXT_GATHERING tuning (Stage 3)
+    # =====================================================================
+
+    # MemoryFlags below this importance score don't get pulled into context.
+    # Raising it = tighter context, less drift toward old events. Lowering
+    # it = more historical color, but more risk of stale facts crowding the
+    # prompt. Scale is 1-10 (see models.MemoryFlag.importance).
+    memory_flag_min_importance: int = 7
+
+    # Hard cap on how many MemoryFlags reach the prompt even if more pass
+    # the importance threshold. Stops a long playthrough from flooding the
+    # context window with old flags.
+    memory_flag_top_n: int = 10
+
+    # =====================================================================
+    # VALIDATION tuning (Stage 7)
+    # =====================================================================
+
+    # Single-character dialogue gets flagged as "too long" past this word
+    # count. Raising it = more tolerance for monologues; lowering it =
+    # snappier dialogue, but risk of flagging legitimate exposition.
+    max_dialogue_words: int = 50
+
+    # =====================================================================
+    # STATE_UPDATE tuning (Stage 9)
+    # =====================================================================
+
+    # Temperature for the small-model call that estimates relationship
+    # trust/affection/familiarity deltas. Lower = more deterministic and
+    # repeatable; higher = more variance turn-to-turn.
+    relationship_update_temperature: float = 0.3
+
+    # Absolute delta below which we skip writing the relationship row.
+    # Stops 0.001 jitter from spamming the DB. Raise if relationship trends
+    # feel too twitchy; lower if subtle interactions should accumulate.
+    relationship_min_change: float = 0.01
+
+    # Temperature for the small-model call that detects story-flag-worthy
+    # events. Lower = more conservative flag detection; higher = more
+    # creative interpretation (and false positives).
+    story_flag_analysis_temperature: float = 0.3
+
     # =====================================================================
     # Validation pipeline (Stage 7) - VALIDATION_MODE controls what the
     # validator does when it finds an issue:

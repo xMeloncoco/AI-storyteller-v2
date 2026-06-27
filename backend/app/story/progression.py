@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas, models
 from ..ai.llm_manager import LLMManager
 from ..ai.prompts import PromptTemplates
+from ..config import settings
 from ..utils.logger import AppLogger
 
 
@@ -211,7 +212,7 @@ JSON Response:"""
             response = await llm_manager.generate_text(
                 prompt,
                 model_size="small",
-                temperature=0.3
+                temperature=settings.story_flag_analysis_temperature,
             )
 
             self.logger.ai_decision(

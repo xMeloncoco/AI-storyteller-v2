@@ -15,6 +15,7 @@ from typing import Dict, Any, List, Optional, Tuple
 from sqlalchemy.orm import Session
 
 from .. import crud
+from ..config import settings
 from ..utils.logger import AppLogger
 
 
@@ -269,9 +270,10 @@ class ContentValidator:
 
         # Check if any single dialogue is excessively long
         for dialogue in dialogues:
-            if len(dialogue.split()) > 50:  # More than 50 words
+            word_count = len(dialogue.split())
+            if word_count > settings.max_dialogue_words:
                 issues.append(
-                    f"Dialogue is too long ({len(dialogue.split())} words). "
+                    f"Dialogue is too long ({word_count} words). "
                     f"Keep character responses concise."
                 )
 

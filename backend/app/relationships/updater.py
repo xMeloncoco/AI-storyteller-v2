@@ -15,6 +15,7 @@ from .. import crud, schemas
 from ..ai.llm_manager import LLMManager
 from ..ai.prompts import PromptTemplates
 from ..ai.context_builder import ContextBuilder
+from ..config import settings
 from ..utils.logger import AppLogger
 
 
@@ -216,7 +217,7 @@ Story response excerpt: {ai_response[:500]}...
             response = await llm_manager.generate_text(
                 prompt,
                 model_size="small",
-                temperature=0.3  # More deterministic
+                temperature=settings.relationship_update_temperature,
             )
 
             self.logger.ai_decision(
@@ -251,9 +252,10 @@ Story response excerpt: {ai_response[:500]}...
             new_familiarity = max(0.0, min(1.0, relationship.familiarity + familiarity_change))
 
             # Only update if there were actual changes
-            if (abs(trust_change) > 0.01 or
-                abs(affection_change) > 0.01 or
-                abs(familiarity_change) > 0.01):
+            min_change = settings.relationship_min_change
+            if (abs(trust_change) > min_change or
+                abs(affection_change) > min_change or
+                abs(familiarity_change) > min_change):
 
                 # Update the relationship in database
                 update_data = schemas.RelationshipUpdate(
