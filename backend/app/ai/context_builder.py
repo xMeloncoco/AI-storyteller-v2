@@ -391,14 +391,14 @@ class ContextBuilder:
         ]
 
     def _collect_memory_flags(self) -> List[MemoryFlagView]:
-        # min_importance and the slice limit are still hardcoded; R5 lifts them
-        # into config.py.
         flags = crud.get_important_memory_flags(
-            self.db, self.playthrough_id, min_importance=7
+            self.db,
+            self.playthrough_id,
+            min_importance=settings.memory_flag_min_importance,
         )
         return [
             MemoryFlagView(flag_type=flag.flag_type, flag_value=flag.flag_value)
-            for flag in flags[:10]
+            for flag in flags[: settings.memory_flag_top_n]
         ]
 
     def _build_character_view(self, character_id: int) -> Optional[CharacterView]:

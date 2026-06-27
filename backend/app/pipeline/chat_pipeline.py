@@ -189,7 +189,7 @@ class ChatPipeline:
         generated_response = await self.llm_manager.generate_text(
             prompt,
             model_size="large",
-            max_tokens=1000,  # Continuations are intentionally shorter.
+            max_tokens=settings.generate_more_max_tokens,
             system_prompt=GENERATE_MORE_SYSTEM_PROMPT,
         )
 

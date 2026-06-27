@@ -78,6 +78,11 @@ def init_db():
             # Re-raise other exceptions
             raise
 
+    # Apply lightweight startup migrations (idempotent). Imported here
+    # rather than at module top so models.py is fully imported first.
+    from .migrations import apply_startup_migrations
+    apply_startup_migrations(engine)
+
     # Log successful initialization
     # Note: Actual logging will be done through our logging system in Phase 1.1
     print("Database initialized successfully")
