@@ -1,11 +1,11 @@
-# 🌟 Dreamwalkers - AI Interactive Storytelling App
+# Dreamwalkers - AI Interactive Storytelling App
 
 An AI-powered interactive storytelling desktop application where users experience immersive narratives with intelligent characters, evolving relationships, and dynamic story progression.
 
-## ✨ Features
+## Features
 
 ### Core Functionality
-- **AI-Powered Narratives**: Chat with intelligent AI characters that remember context and respond consistently
+- **AI-Powered Narratives**: Chat with AI characters that remember context and respond consistently
 - **Character Depth**: Each character has detailed personality, values, fears, speech patterns, and secrets
 - **Dynamic Relationships**: Relationships evolve based on interactions (trust, affection, familiarity metrics)
 - **Story Progression**: Structured story arcs with conditions and progression tracking
@@ -13,24 +13,28 @@ An AI-powered interactive storytelling desktop application where users experienc
 - **Multiple Stories**: Load different story templates and create multiple playthroughs
 
 ### Developer/Testing Tools
-- **🧪 Tester/Debugger**: Complete database viewer and context window inspector
+- **Tester/Debugger**: Database viewer and context window inspector
   - Browse characters, relationships, locations, story arcs, and flags
   - View the exact context sent to the AI
   - Reset playthroughs for fresh testing
-- **📊 Comprehensive Logging**: Track all AI decisions and system operations
-- **💾 Test Data Loader**: Load story templates with one click
-- **🎮 Database Management**: View and reset playthrough data easily
+- **Comprehensive Logging**: All AI decisions and system operations
+- **Test Data Loader**: Load story templates with one click
+- **Database Management**: View and reset playthrough data easily
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+
-- Free AI API key (see [AI_SETUP.md](./AI_SETUP.md))
+- An AI provider: local [Ollama](https://ollama.com/) (default, no key) or a free API key (see [AI_SETUP.md](./AI_SETUP.md))
 
-### Installation
+### One-command start (recommended)
 
-1. **Clone and setup backend:**
+See [TESTING.md](./TESTING.md). On Linux/Mac: `./start-test.sh`. On Windows: `start-test.bat`.
+
+### Manual installation
+
+1. **Backend setup:**
 ```bash
 cd backend
 python -m venv venv
@@ -39,13 +43,9 @@ pip install -r requirements.txt
 ```
 
 2. **Configure AI provider:**
-Create `backend/.env` file:
-```bash
-AI_PROVIDER=openrouter  # or nebius
-OPENROUTER_API_KEY=your_free_api_key_here
-```
+Copy `backend/.env.example` to `backend/.env`. The default uses local Ollama (no API key). To use OpenRouter or Nebius instead, see [AI_SETUP.md](./AI_SETUP.md).
 
-3. **Install frontend:**
+3. **Frontend setup:**
 ```bash
 cd ../frontend
 npm install
@@ -68,24 +68,24 @@ npm start
 
 The app will open automatically. Backend runs on `http://localhost:8000`.
 
-## 📖 Using the App
+## Using the App
 
 ### First Time Setup
 1. **Load Test Data**: Click Settings → Load All Test Data
-2. **Select a Story**: Go to Stories screen, choose "Starling Contract"
+2. **Select a Story**: Go to Stories screen and pick one
 3. **Create Playthrough**: Click "New Playthrough", name it
-4. **Start Chatting**: Type messages and interact with characters!
+4. **Start Chatting**: Type messages and interact with characters
 
-### Tester/Debugger (🧪 Button)
+### Tester/Debugger (🧪 button)
 - **Database Viewer**: Browse all playthrough data
-  - Characters: View personalities, traits, secrets
-  - Relationships: Check trust/affection metrics
-  - Story Arcs: Track progression
-  - Flags: See what's been triggered
+  - Characters: personalities, traits, secrets
+  - Relationships: trust/affection metrics
+  - Locations, story flags, and scene state
 - **Context Window**: See exactly what the AI sees
+- **Logs**: Per-turn grouped logs of AI decisions
 - **Reset**: Start playthrough fresh for testing
 
-## 🏗️ Project Structure
+## Project Structure
 
 ```
 AI-storyteller-v2/
@@ -109,9 +109,9 @@ AI-storyteller-v2/
 └── AI_SETUP.md              # AI provider setup guide
 ```
 
-## 🎮 Creating Stories
+## Creating Stories
 
-Stories are defined in JSON format. See `backend/test_data/TEMPLATE_story.json` for a comprehensive template with documentation.
+Stories are defined in JSON. See `backend/test_data/` for examples.
 
 ### Basic Story Structure
 ```json
@@ -131,32 +131,28 @@ Stories are defined in JSON format. See `backend/test_data/TEMPLATE_story.json` 
 2. Open Settings → Test Data Management
 3. Click "Refresh List" → "Load All Test Data"
 
-## 🔧 Configuration
+## Configuration
 
-Edit `backend/.env`:
+Defaults live in `backend/app/config.py` and can be overridden via `backend/.env`. See `backend/.env.example` for a full template. Common keys:
 
 ```bash
-# AI Provider (openrouter, nebius, or demo)
-AI_PROVIDER=openrouter
+# AI Provider: local (Ollama, default), openrouter, nebius, or demo
+AI_PROVIDER=local
 
-# API Keys
-OPENROUTER_API_KEY=your_key
-NEBIUS_API_KEY=your_key
-
-# Models (free options - updated for reliability)
-SMALL_MODEL=microsoft/phi-3-mini-128k-instruct:free
-LARGE_MODEL=google/gemma-2-9b-it:free
+# Models for the default local provider
+SMALL_MODEL=llama3.2:3b
+LARGE_MODEL=llama3.2
 
 # Database
 DATABASE_URL=sqlite:///./data/dreamwalkers.db
 
 # Context Settings
-MAX_CONTEXT_MESSAGES=20
+MAX_CONTEXT_MESSAGES=40
 MAX_TOKENS_SMALL=500
-MAX_TOKENS_LARGE=2000
+MAX_TOKENS_LARGE=3000
 ```
 
-## 🌐 API Endpoints
+## API Endpoints
 
 ### Stories & Playthroughs
 - `GET /stories/` - List all stories
@@ -177,36 +173,15 @@ MAX_TOKENS_LARGE=2000
 - `GET /logs` - View system logs
 - `GET /admin/tester/logs/{session_id}` - Get grouped logs
 
-## 🧩 Key Technologies
+## Key Technologies
 
 - **Backend**: FastAPI (Python), SQLAlchemy, Pydantic
 - **Frontend**: Electron, JavaScript, HTML/CSS
 - **Database**: SQLite
-- **AI**: OpenRouter / Nebius (free tiers available)
+- **AI**: Ollama (local, default), OpenRouter, or Nebius
 - **Architecture**: REST API, Client-Server
 
-## 🎯 Development Roadmap
-
-### ✅ Completed
-- [x] Core chat system with AI integration
-- [x] Character and relationship tracking
-- [x] Story arc progression
-- [x] Database viewer and tester tools
-- [x] Test data loading system
-- [x] Context window tracking
-- [x] Comprehensive logging
-
-### 🚧 Future Features
-- [ ] ChromaDB vector memory for long-term context
-- [ ] Character decision validation
-- [ ] Relationship update triggers
-- [ ] Story flag automation
-- [ ] Memory summarization
-- [ ] User character customization
-- [ ] Visual novel mode
-- [ ] Story creation UI
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Backend won't start
 - Check Python version: `python --version` (need 3.11+)
@@ -238,29 +213,19 @@ Free tier models are shared resources and may be rate-limited during peak usage:
 - Click "Load All Test Data"
 - Refresh Stories screen
 
-## 📚 Documentation
+## Documentation
 
-- **AI_SETUP.md** - How to get free AI API keys and configure providers
-- **backend/test_data/TEMPLATE_story.json** - Story creation template with full documentation
-- **backend/app/models.py** - Database schema documentation
+- **AI_SETUP.md** - Configure local Ollama or free online AI providers
+- **TESTING.md** - Quick-start scripts for local testing
 - **backend/app/PIPELINE_STAGES.md** - AI processing pipeline explanation
+- **docs/AI_PROMPT_CONSTRUCTION.md** - How prompts are built
+- **docs/RESPONSE_FLOW.md** - End-to-end response flow
+- **docs/STORY_DATA_STRUCTURE.md** - Story JSON schema reference
 
-## 🤝 Contributing
+## Contributing
 
-This is a personal project, but suggestions and feedback are welcome!
+This is a personal project, but suggestions and feedback are welcome.
 
-## 📄 License
+## License
 
 MIT License - Feel free to use and modify for your own projects.
-
-## 🎉 Acknowledgments
-
-Built with:
-- FastAPI for the incredible async Python framework
-- Electron for cross-platform desktop apps
-- OpenRouter & Nebius for free AI model access
-- The open-source AI community
-
----
-
-**Ready to create amazing stories? See [AI_SETUP.md](./AI_SETUP.md) to get started!** 🚀
