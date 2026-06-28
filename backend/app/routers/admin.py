@@ -7,6 +7,7 @@ Handles:
 - System administration
 """
 from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import DateTime, Date
 from sqlalchemy.orm import Session
 from pathlib import Path
 from typing import List, Optional
@@ -147,20 +148,28 @@ async def load_test_data(
 
         # Load each file
         loaded_stories = []
+        loaded_fixtures = []
         errors = []
 
         for json_file in files_to_load:
             try:
-                story_id = load_story_from_json(db, str(json_file))
+                with open(json_file, "r", encoding="utf-8") as f:
+                    raw = json.load(f)
 
-                # Get story details
-                story = db.query(models.Story).filter(models.Story.id == story_id).first()
-
-                loaded_stories.append({
-                    "filename": json_file.name,
-                    "story_id": story_id,
-                    "title": story.title if story else "Unknown"
-                })
+                if isinstance(raw, dict) and raw.get("kind") == "playthrough_fixture":
+                    result = _load_playthrough_fixture(db, raw)
+                    loaded_fixtures.append({
+                        "filename": json_file.name,
+                        **result,
+                    })
+                else:
+                    story_id = load_story_from_json(db, str(json_file))
+                    story = db.query(models.Story).filter(models.Story.id == story_id).first()
+                    loaded_stories.append({
+                        "filename": json_file.name,
+                        "story_id": story_id,
+                        "title": story.title if story else "Unknown"
+                    })
 
             except Exception as e:
                 errors.append({
@@ -171,6 +180,7 @@ async def load_test_data(
         # Get summary counts
         summary = {
             "loaded_stories": len(loaded_stories),
+            "loaded_fixtures": len(loaded_fixtures),
             "errors": len(errors),
             "total_characters": db.query(models.Character).filter(
                 models.Character.playthrough_id.is_(None)
@@ -185,14 +195,25 @@ async def load_test_data(
 
         log_notification(
             db,
-            f"Loaded {len(loaded_stories)} test stories",
+            f"Loaded {len(loaded_stories)} stories and {len(loaded_fixtures)} fixtures",
             "database",
             summary
         )
 
+        # Surface fixtures in `loaded` so existing UI shows them too.
+        loaded_combined = list(loaded_stories) + [
+            {"filename": f["filename"],
+             "story_id": f["story_id"],
+             "title": f"{f['story_title']} — {f['playthrough_name']}",
+             "kind": "playthrough_fixture",
+             "playthrough_id": f["playthrough_id"]}
+            for f in loaded_fixtures
+        ]
+
         return {
             "status": "success",
-            "loaded": loaded_stories,
+            "loaded": loaded_combined,
+            "loaded_fixtures": loaded_fixtures,
             "errors": errors,
             "summary": summary
         }
@@ -822,6 +843,359 @@ async def export_playthrough_to_file(
     except Exception as e:
         log_error(db, f"Error exporting playthrough: {str(e)}", "database")
         raise HTTPException(status_code=500, detail=f"Error exporting playthrough: {str(e)}")
+
+
+# =============================================================================
+# PLAYTHROUGH FIXTURE LOADER
+# =============================================================================
+
+
+def _parse_dt(value):
+    """Parse an ISO datetime string back to a datetime. Accepts trailing 'Z'."""
+    if value is None or isinstance(value, datetime):
+        return value
+    if not isinstance(value, str):
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _model_kwargs(model, row_dict: dict, fk_overrides: dict, drop: set = None) -> dict:
+    """Build constructor kwargs for `model` from an exported `row_dict`.
+
+    - Drops the `id` column (DB assigns a fresh one) and any keys in `drop`.
+    - Skips sidecar keys (anything starting with `_`).
+    - Applies `fk_overrides` for any foreign keys we've already remapped.
+    - Parses ISO datetime strings into datetimes for DateTime/Date columns.
+    """
+    drop = drop or set()
+    kwargs = {}
+    for col in model.__table__.columns:
+        name = col.name
+        if name == "id" or name in drop:
+            continue
+        if name in fk_overrides:
+            kwargs[name] = fk_overrides[name]
+            continue
+        if name not in row_dict:
+            continue
+        value = row_dict[name]
+        if isinstance(col.type, (DateTime, Date)) and isinstance(value, str):
+            parsed = _parse_dt(value)
+            if parsed is not None:
+                value = parsed
+        kwargs[name] = value
+    return kwargs
+
+
+def _load_playthrough_fixture(db: Session, data: dict) -> dict:
+    """Import a fixture produced by the exporter.
+
+    Strategy:
+    - Reuse an existing story by title if present; otherwise create it and
+      its template rows from the `templates` section.
+    - Always create a new playthrough (fixtures are meant to be re-runnable).
+    - Resolve character/location references via `_character_name`,
+      `_entity*_name`, `_user_character_name`, `_location_name` sidecars
+      so old IDs in the JSON are never trusted.
+    """
+    story_data = data.get("story") or {}
+    templates = data.get("templates") or {}
+    pt_data = data.get("playthrough") or {}
+
+    if not story_data.get("title"):
+        raise ValueError("Fixture missing story.title")
+    if not pt_data:
+        raise ValueError("Fixture missing playthrough section")
+
+    # ----- 1. Story (reuse by title or create fresh) -----
+    story = db.query(models.Story).filter(
+        models.Story.title == story_data["title"]
+    ).first()
+    story_is_new = False
+
+    if not story:
+        story = models.Story(**_model_kwargs(models.Story, story_data, fk_overrides={}))
+        db.add(story)
+        db.commit()
+        db.refresh(story)
+        story_is_new = True
+
+    # When the story already exists, look up its template character names so
+    # instance characters can still resolve `_template_character_name` to an id.
+    template_char_id_by_name: dict[str, int] = {}
+    template_loc_id_by_name: dict[str, int] = {}
+    template_arc_id_by_name: dict[str, int] = {}
+
+    if story_is_new:
+        # Templates first: characters, locations, arcs, then relationships
+        # (relationships reference character ids).
+        for ct in templates.get("characters", []):
+            row = models.Character(**_model_kwargs(
+                models.Character, ct,
+                fk_overrides={"story_id": story.id, "playthrough_id": None,
+                              "template_character_id": None},
+            ))
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+            template_char_id_by_name[row.character_name] = row.id
+
+        for lt in templates.get("locations", []):
+            row = models.Location(**_model_kwargs(
+                models.Location, lt,
+                fk_overrides={"story_id": story.id, "playthrough_id": None,
+                              "parent_location_id": None},
+            ))
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+            template_loc_id_by_name[row.location_name] = row.id
+
+        for at in templates.get("story_arcs", []):
+            row = models.StoryArc(**_model_kwargs(
+                models.StoryArc, at,
+                fk_overrides={"story_id": story.id, "playthrough_id": None},
+            ))
+            db.add(row)
+            db.commit()
+            db.refresh(row)
+            template_arc_id_by_name[row.arc_name] = row.id
+
+        for rt in templates.get("relationships", []):
+            e1 = template_char_id_by_name.get(rt.get("_entity1_name"))
+            e2 = template_char_id_by_name.get(rt.get("_entity2_name"))
+            if e1 is None or e2 is None:
+                continue
+            row = models.Relationship(**_model_kwargs(
+                models.Relationship, rt,
+                fk_overrides={"story_id": story.id, "playthrough_id": None,
+                              "entity1_id": e1, "entity2_id": e2},
+            ))
+            db.add(row)
+        db.commit()
+
+        for et in templates.get("story_episodes", []):
+            arc_id = template_arc_id_by_name.get(et.get("_arc_name"))
+            if arc_id is None:
+                continue
+            row = models.StoryEpisode(**_model_kwargs(
+                models.StoryEpisode, et,
+                fk_overrides={"arc_id": arc_id, "playthrough_id": None},
+            ))
+            db.add(row)
+        db.commit()
+    else:
+        # Story already existed — populate the template name maps from DB.
+        for cid, name in db.query(models.Character.id, models.Character.character_name).filter(
+            models.Character.story_id == story.id,
+            models.Character.playthrough_id.is_(None)
+        ).all():
+            template_char_id_by_name[name] = cid
+        for lid, name in db.query(models.Location.id, models.Location.location_name).filter(
+            models.Location.story_id == story.id,
+            models.Location.playthrough_id.is_(None)
+        ).all():
+            template_loc_id_by_name[name] = lid
+        for aid, name in db.query(models.StoryArc.id, models.StoryArc.arc_name).filter(
+            models.StoryArc.story_id == story.id,
+            models.StoryArc.playthrough_id.is_(None)
+        ).all():
+            template_arc_id_by_name[name] = aid
+
+    # ----- 2. Playthrough (always new) -----
+    pt = models.Playthrough(**_model_kwargs(
+        models.Playthrough, pt_data,
+        fk_overrides={"story_id": story.id, "user_id": None},
+    ))
+    db.add(pt)
+    db.commit()
+    db.refresh(pt)
+
+    # ----- 3. Per-playthrough instance rows -----
+    inst_char_id_by_name: dict[str, int] = {}
+    inst_loc_id_by_name: dict[str, int] = {}
+    inst_arc_id_by_name: dict[str, int] = {}
+
+    for c in pt_data.get("characters", []):
+        tpl_id = template_char_id_by_name.get(c.get("_template_character_name"))
+        row = models.Character(**_model_kwargs(
+            models.Character, c,
+            fk_overrides={"story_id": story.id, "playthrough_id": pt.id,
+                          "template_character_id": tpl_id},
+        ))
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        inst_char_id_by_name[row.character_name] = row.id
+
+    for l in pt_data.get("locations", []):
+        row = models.Location(**_model_kwargs(
+            models.Location, l,
+            fk_overrides={"story_id": story.id, "playthrough_id": pt.id,
+                          "parent_location_id": None},
+        ))
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        inst_loc_id_by_name[row.location_name] = row.id
+
+    for a in pt_data.get("story_arcs", []):
+        row = models.StoryArc(**_model_kwargs(
+            models.StoryArc, a,
+            fk_overrides={"story_id": story.id, "playthrough_id": pt.id},
+        ))
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        inst_arc_id_by_name[row.arc_name] = row.id
+
+    for r in pt_data.get("relationships", []):
+        e1 = inst_char_id_by_name.get(r.get("_entity1_name"))
+        e2 = inst_char_id_by_name.get(r.get("_entity2_name"))
+        if e1 is None or e2 is None:
+            continue
+        row = models.Relationship(**_model_kwargs(
+            models.Relationship, r,
+            fk_overrides={"story_id": story.id, "playthrough_id": pt.id,
+                          "entity1_id": e1, "entity2_id": e2},
+        ))
+        db.add(row)
+    db.commit()
+
+    for e in pt_data.get("story_episodes", []):
+        arc_id = inst_arc_id_by_name.get(e.get("_arc_name"))
+        if arc_id is None:
+            continue
+        row = models.StoryEpisode(**_model_kwargs(
+            models.StoryEpisode, e,
+            fk_overrides={"arc_id": arc_id, "playthrough_id": pt.id},
+        ))
+        db.add(row)
+    db.commit()
+
+    # Story flags (no character_id)
+    for f in pt_data.get("story_flags", []):
+        row = models.StoryFlag(**_model_kwargs(
+            models.StoryFlag, f,
+            fk_overrides={"playthrough_id": pt.id},
+        ))
+        db.add(row)
+    db.commit()
+
+    # Character-scoped tables (knowledge / state / goals / beliefs / avoidances)
+    def add_char_scoped(model, rows):
+        for r in rows:
+            cid = inst_char_id_by_name.get(r.get("_character_name"))
+            if cid is None:
+                continue
+            row = model(**_model_kwargs(
+                model, r,
+                fk_overrides={"playthrough_id": pt.id, "character_id": cid},
+            ))
+            db.add(row)
+
+    add_char_scoped(models.CharacterKnowledge, pt_data.get("character_knowledge", []))
+    add_char_scoped(models.CharacterState, pt_data.get("character_states", []))
+    add_char_scoped(models.CharacterGoal, pt_data.get("character_goals", []))
+    add_char_scoped(models.CharacterBelief, pt_data.get("character_beliefs", []))
+    add_char_scoped(models.CharacterAvoidance, pt_data.get("character_avoidances", []))
+    db.commit()
+
+    # CharacterMemory has an extra location_id ref + session_id (deferred —
+    # session_id fixed up after sessions are created).
+    memories_to_fix_session: list[tuple[models.CharacterMemory, Optional[int]]] = []
+    for m in pt_data.get("character_memories", []):
+        cid = inst_char_id_by_name.get(m.get("_character_name"))
+        if cid is None:
+            continue
+        loc_id = inst_loc_id_by_name.get(m.get("_location_name"))
+        row = models.CharacterMemory(**_model_kwargs(
+            models.CharacterMemory, m,
+            fk_overrides={"playthrough_id": pt.id, "character_id": cid,
+                          "location_id": loc_id, "session_id": None},
+            drop={"session_id"},
+        ))
+        db.add(row)
+        memories_to_fix_session.append((row, m.get("session_id")))
+    db.commit()
+
+    # ----- 4. Sessions + conversations + scene states -----
+    session_id_remap: dict[int, int] = {}
+
+    for sess in pt_data.get("sessions", []):
+        old_session_id = sess.get("id")
+        user_char_id = inst_char_id_by_name.get(sess.get("_user_character_name"))
+        s_row = models.Session(**_model_kwargs(
+            models.Session, sess,
+            fk_overrides={"playthrough_id": pt.id, "user_character_id": user_char_id},
+        ))
+        db.add(s_row)
+        db.commit()
+        db.refresh(s_row)
+        if old_session_id is not None:
+            session_id_remap[old_session_id] = s_row.id
+
+        for conv in sess.get("conversations", []):
+            row = models.Conversation(**_model_kwargs(
+                models.Conversation, conv,
+                fk_overrides={"session_id": s_row.id, "playthrough_id": pt.id},
+            ))
+            db.add(row)
+        db.commit()
+
+        for scene in sess.get("scene_states", []):
+            sc_row = models.SceneState(**_model_kwargs(
+                models.SceneState, scene,
+                fk_overrides={"session_id": s_row.id, "playthrough_id": pt.id},
+            ))
+            db.add(sc_row)
+            db.commit()
+            db.refresh(sc_row)
+
+            for char_in_scene in scene.get("characters_in_scene", []):
+                cid = inst_char_id_by_name.get(char_in_scene.get("_character_name"))
+                row = models.SceneCharacter(**_model_kwargs(
+                    models.SceneCharacter, char_in_scene,
+                    fk_overrides={"scene_state_id": sc_row.id,
+                                  "playthrough_id": pt.id,
+                                  "character_id": cid},
+                ))
+                db.add(row)
+            db.commit()
+
+    # Memory flags - need session_id remap; fall back to first session
+    fallback_session_id = next(iter(session_id_remap.values()), None)
+    for m in pt_data.get("memory_flags", []):
+        old_sid = m.get("session_id")
+        new_sid = session_id_remap.get(old_sid, fallback_session_id)
+        if new_sid is None:
+            continue  # no session to attach to
+        row = models.MemoryFlag(**_model_kwargs(
+            models.MemoryFlag, m,
+            fk_overrides={"playthrough_id": pt.id, "session_id": new_sid},
+        ))
+        db.add(row)
+
+    # Backfill character_memory.session_id from the remap
+    for mem_row, old_sid in memories_to_fix_session:
+        mem_row.session_id = session_id_remap.get(old_sid)
+    db.commit()
+
+    return {
+        "story_id": story.id,
+        "story_title": story.title,
+        "story_was_new": story_is_new,
+        "playthrough_id": pt.id,
+        "playthrough_name": pt.playthrough_name,
+        "counts": {
+            "characters": len(inst_char_id_by_name),
+            "sessions": len(session_id_remap),
+            "conversations": sum(len(s.get("conversations", [])) for s in pt_data.get("sessions", [])),
+        },
+    }
 
 
 # =============================================================================
