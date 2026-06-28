@@ -85,6 +85,17 @@ async function getStats() {
     return apiRequest('/stats');
 }
 
+async function getValidationMode() {
+    return apiRequest('/admin/validation-mode');
+}
+
+async function setValidationMode(mode) {
+    return apiRequest('/admin/validation-mode', {
+        method: 'PATCH',
+        body: JSON.stringify({ validation_mode: mode })
+    });
+}
+
 // =============================================================================
 // Stories
 // =============================================================================

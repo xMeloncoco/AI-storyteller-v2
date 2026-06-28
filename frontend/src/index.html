@@ -131,6 +131,19 @@
                         </label>
                     </div>
                     <div class="setting-group">
+                        <h3>Validation Mode</h3>
+                        <p>Controls what happens when the AI violates a story rule.</p>
+                        <label>
+                            Mode:
+                            <select id="setting-validation-mode">
+                                <option value="warn">Warn — log the issue, keep the response</option>
+                                <option value="repair">Repair — try to fix the response automatically</option>
+                                <option value="block">Block — reject the response with an error (strict/test)</option>
+                            </select>
+                        </label>
+                        <div id="validation-mode-status" style="margin-top: 6px; font-size: 0.85em;"></div>
+                    </div>
+                    <div class="setting-group">
                         <h3>Test Data Management</h3>
                         <p>Load test stories and templates into the database for testing and development.</p>
                         <div id="test-data-list" style="margin: 10px 0;">

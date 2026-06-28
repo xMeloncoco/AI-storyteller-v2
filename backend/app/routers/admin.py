@@ -21,6 +21,30 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 # =============================================================================
+# VALIDATION MODE
+# =============================================================================
+
+VALID_MODES = {"warn", "block", "repair"}
+
+
+@router.get("/validation-mode")
+async def get_validation_mode():
+    """Return the current runtime validation mode."""
+    return {"validation_mode": settings.validation_mode}
+
+
+@router.patch("/validation-mode")
+async def set_validation_mode(body: dict):
+    """Change the runtime validation mode (warn / block / repair)."""
+    mode = body.get("validation_mode", "")
+    if mode not in VALID_MODES:
+        raise HTTPException(status_code=422, detail=f"Invalid mode '{mode}'. Must be one of: {sorted(VALID_MODES)}")
+    settings.validation_mode = mode
+    log_notification("validation.mode_changed", f"Validation mode set to: {mode}")
+    return {"validation_mode": settings.validation_mode}
+
+
+# =============================================================================
 # TEST DATA LOADING
 # =============================================================================
 

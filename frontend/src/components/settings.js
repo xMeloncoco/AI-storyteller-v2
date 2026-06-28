@@ -31,6 +31,12 @@ const SettingsComponent = {
         // Update API URL in api.js
         setApiUrl(this.settings.apiUrl);
 
+        // Load validation mode from backend and set up change handler
+        this.loadValidationMode();
+        document.getElementById('setting-validation-mode').addEventListener('change', async (e) => {
+            await this.saveValidationMode(e.target.value);
+        });
+
         console.log('Settings component initialized', this.settings);
     },
 
@@ -72,6 +78,33 @@ const SettingsComponent = {
         }
 
         console.log(`Setting updated: ${key} = ${value}`);
+    },
+
+    async loadValidationMode() {
+        const select = document.getElementById('setting-validation-mode');
+        const status = document.getElementById('validation-mode-status');
+        try {
+            const data = await getValidationMode();
+            select.value = data.validation_mode;
+            status.textContent = '';
+        } catch (e) {
+            status.style.color = '#ef4444';
+            status.textContent = 'Could not load mode from backend.';
+        }
+    },
+
+    async saveValidationMode(mode) {
+        const status = document.getElementById('validation-mode-status');
+        status.style.color = '#9ca3af';
+        status.textContent = 'Saving…';
+        try {
+            await setValidationMode(mode);
+            status.style.color = '#10b981';
+            status.textContent = `Saved: ${mode}`;
+        } catch (e) {
+            status.style.color = '#ef4444';
+            status.textContent = `Error: ${e.message}`;
+        }
     },
 
     /**
