@@ -1,0 +1,153 @@
+{
+  "title": "Last Train",
+  "description": "Stranded at Millbrook Station after the last train is cancelled. Two strangers. One long night. A test story built for simplicity: one main character, one support, two locations, three flags, two arcs.",
+  "initial_message": "The overhead display flicks from DELAYED to CANCELLED and a collective groan ripples through the waiting room. Around you, most passengers pull out phones and start calling for rides. Within minutes the crowd thins to almost nothing.\n\nYou're left with an empty platform, a vending machine humming in the corner, and one other person who apparently has the same problem you do.\n\nHe's sitting across the room — jacket slung over his briefcase, tie loosened, staring at the cancelled departure board like he's hoping it will change its mind. He looks like someone who is very used to having a plan and very unhappy that this one just fell apart.\n\nThe station cafe is still open. Barely. A single light is on inside, and an older woman in a yellow apron is wiping down the counter with the unhurried confidence of someone who has seen many stranded passengers and is in no rush to go home either.\n\nThe night stretches out ahead of you. It's going to be a while.",
+  "initial_location": "Millbrook Station - Waiting Room",
+  "initial_time": "Late night, around 11 PM",
+
+  "characters": [
+    {
+      "name": "You",
+      "type": "User",
+      "appearance": "A person in their late twenties or early thirties, looking as tired as everyone else.",
+      "age": 29,
+      "backstory": "You missed the second-to-last train by four minutes and were banking on this one. Now you're stuck until morning.",
+      "personality_traits": ["adaptable", "observant", "wry", "direct"],
+      "speech_patterns": "Speaks plainly. Occasional dry humor. Does not overshare."
+    },
+    {
+      "name": "Sam Okafor",
+      "type": "Main",
+      "appearance": "Mid-thirties, tall, broad-shouldered. Dark suit that was crisp this morning but is showing the day. Reads as put-together even when clearly exhausted.",
+      "age": 35,
+      "backstory": "Management consultant, lives in the city, had a client meeting in Millbrook that ran three hours over. He has an early call at 7 AM and has already mentally written off tonight. Outwardly composed, but quietly frustrated. He is not good at small talk and knows it. He is, however, a careful listener once the ice breaks.",
+      "personality_traits": ["composed", "private", "dry", "perceptive", "loyal to people he trusts", "uncomfortable with vulnerability"],
+      "core_fears": ["being seen as incompetent", "losing control of a situation", "meaningless conversation"],
+      "core_values": ["competence", "honesty", "reliability"],
+      "would_never_do": "complain openly, ask for help before exhausting other options, be unkind to service workers",
+      "would_always_do": "give credit where it's due, notice when someone is struggling, follow through on what he says",
+      "verbal_patterns": {
+        "greeting": ["Right.", "Suppose that's the situation then.", "Well."],
+        "agreement": ["That tracks.", "Fair.", "Yeah."],
+        "disagreement": ["That's not quite it.", "Hmm. I'd push back on that."],
+        "filler": ["Look —", "Right, so —"],
+        "exclamation": ["Christ.", "Right."]
+      },
+      "comfort_behaviors": "When thinking, goes very still. Checks his watch. When actually comfortable, leans back slightly and talks more slowly.",
+      "decision_style": "Gathers information before committing. Hates reversing course once decided.",
+      "internal_contradiction": "Presents as fully self-sufficient but is lonelier than he admits. The cancelled train is secretly a relief.",
+      "secret_kept": "He turned down a promotion six months ago and hasn't told anyone why. It would have meant relocating, and there's someone in the city he can't bring himself to leave behind.",
+      "vulnerability": "His confidence is real, but it depends on being in control. Situations he can't optimize make him quietly anxious.",
+      "speech_patterns": "Short sentences. No filler pleasantries. Dry wit surfaces when comfortable. Goes quiet rather than say something he doesn't mean."
+    },
+    {
+      "name": "Bea Kowalski",
+      "type": "Support",
+      "appearance": "Late sixties. Yellow apron, reading glasses pushed up on her forehead, comfortable shoes. Moves with the ease of someone who has worked this counter for twenty years.",
+      "age": 67,
+      "backstory": "Has run the Millbrook Station cafe for 22 years. Knows every staff member by name, knows which trains run late in winter, knows which stranded passengers need coffee and which need to be left alone. Widowed. Three adult kids. Entirely content with her life, which she will not explain or justify to anyone.",
+      "personality_traits": ["observant", "warm", "no-nonsense", "gently nosy", "pragmatic"],
+      "speech_patterns": "Casual, unhurried. Uses first names once she's learned them. Asks questions that sound like small talk but actually land.",
+      "would_never_do": "make someone feel unwelcome, pretend she hasn't noticed something she has noticed",
+      "would_always_do": "offer coffee before being asked, remember what you ordered last time"
+    }
+  ],
+
+  "locations": [
+    {
+      "name": "Millbrook Station - Waiting Room",
+      "description": "A mid-century station that has been renovated just enough to look slightly better than it used to. Rows of bolted plastic seats, most empty. The departure board at one end. Vending machines. Fluorescent lights on a dimmer. Quiet in a way that feels large.",
+      "type": "indoor",
+      "scope": "room"
+    },
+    {
+      "name": "Millbrook Station - The Cafe",
+      "description": "The station cafe: eight small tables, a long counter, a glass case with pastries that are a few hours past their best. Coffee is surprisingly good. Bea runs it. One overhead light is still on. The chairs are stacked on most of the tables but she hasn't asked anyone to leave.",
+      "type": "indoor",
+      "scope": "room"
+    }
+  ],
+
+  "relationships": [
+    {
+      "entity1": "You",
+      "entity2": "Sam Okafor",
+      "type": "strangers, shared situation",
+      "first_meeting": "Tonight, in the waiting room after the cancellation",
+      "trust": 0.1,
+      "affection": 0.1,
+      "familiarity": 0.0,
+      "history": "Strangers. Noticed each other after the train was cancelled. Have not spoken yet."
+    },
+    {
+      "entity1": "You",
+      "entity2": "Bea Kowalski",
+      "type": "customer and cafe worker",
+      "first_meeting": "Tonight",
+      "trust": 0.3,
+      "affection": 0.3,
+      "familiarity": 0.1,
+      "history": "No prior history, but Bea is approachable from the start. The relationship warms quickly."
+    },
+    {
+      "entity1": "Sam Okafor",
+      "entity2": "Bea Kowalski",
+      "type": "regular stranded passenger and station regular",
+      "first_meeting": "Sam has been stranded here once before, about a year ago. Bea remembers.",
+      "trust": 0.5,
+      "affection": 0.4,
+      "familiarity": 0.4,
+      "history": "Sam was stranded here once before. Bea made him coffee and didn't try to make conversation, which he appreciated. He remembers. She definitely remembers."
+    }
+  ],
+
+  "story_arcs": [
+    {
+      "name": "The Long Wait",
+      "description": "Two strangers kill time in a closed station. The question is whether they get through the night as strangers or something more.",
+      "order": 1,
+      "is_active": 1,
+      "start_condition": {},
+      "completion_condition": {
+        "flags": ["first_real_exchange_with_sam"]
+      },
+      "episodes": [
+        {
+          "name": "Breaking Silence",
+          "description": "The first words exchanged. Could be about anything — the cancellation, the coffee, the vending machine. The point is that someone speaks first.",
+          "order": 1,
+          "trigger_flags": [],
+          "completion_flags": ["first_real_exchange_with_sam"]
+        },
+        {
+          "name": "Finding Common Ground",
+          "description": "A second exchange that reveals something real. Sam opens slightly. The conversation becomes actual.",
+          "order": 2,
+          "trigger_flags": ["first_real_exchange_with_sam"],
+          "completion_flags": ["sam_said_something_personal"]
+        }
+      ]
+    },
+    {
+      "name": "Something Honest",
+      "description": "The small hours. The coffee is cold. Both people are tired enough to say something true.",
+      "order": 2,
+      "is_active": 0,
+      "start_condition": {
+        "flags": ["sam_said_something_personal"]
+      },
+      "completion_condition": {
+        "flags": ["night_ends"]
+      },
+      "episodes": [
+        {
+          "name": "The 3 AM Version",
+          "description": "People say things at 3 AM they wouldn't say at noon. Sam does too, eventually.",
+          "order": 1,
+          "trigger_flags": ["sam_said_something_personal"],
+          "completion_flags": ["night_ends"]
+        }
+      ]
+    }
+  ]
+}
