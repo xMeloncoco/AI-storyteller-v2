@@ -57,10 +57,6 @@ async function loadStories() {
         if (stories.length === 0) {
             storiesList.innerHTML = `
                 <p>No stories found. Please import test data first.</p>
-                <p style="color: #9ca3af; margin-top: 10px;">
-                    Run in backend folder:<br>
-                    <code>python test_data/import_test_data.py --story both</code>
-                </p>
             `;
             return;
         }
