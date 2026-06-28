@@ -170,38 +170,107 @@ const SettingsComponent = {
         console.log('Settings reset to defaults');
     },
 
+    _testDataCache: [],
+
     /**
-     * Load and display available test data
+     * Load available test data files and populate the dropdown.
      */
     async loadTestDataList() {
-        const listContainer = document.getElementById('test-data-list');
+        const select = document.getElementById('select-testdata-file');
+        const desc = document.getElementById('test-data-selected-desc');
+        const statusContainer = document.getElementById('test-data-status');
+
+        select.innerHTML = '<option value="">Loading…</option>';
+        desc.textContent = '';
 
         try {
             const data = await getAvailableTestData();
+            this._testDataCache = data.available || [];
 
-            if (data.count === 0) {
-                listContainer.innerHTML = `<p style="color: #9ca3af;">No test data files found in test_data directory.</p>`;
+            if (!this._testDataCache.length) {
+                select.innerHTML = '<option value="">No files found</option>';
+                desc.textContent = 'No JSON files in backend/test_data/.';
                 return;
             }
 
-            let html = '<div style="font-size: 0.9em;">';
-            html += `<p style="margin-bottom: 5px;"><strong>Available stories (${data.count}):</strong></p>`;
-            html += '<ul style="margin: 5px 0; padding-left: 20px;">';
-
-            for (const file of data.available) {
-                if (file.error) {
-                    html += `<li style="color: #ef4444;">${file.filename} - Error: ${file.description}</li>`;
-                } else {
-                    html += `<li><strong>${file.title}</strong> (${file.filename})<br>`;
-                    html += `<span style="color: #9ca3af; font-size: 0.9em;">${file.description}</span></li>`;
-                }
+            select.innerHTML = '';
+            for (const file of this._testDataCache) {
+                const opt = document.createElement('option');
+                opt.value = file.filename;
+                opt.textContent = file.error
+                    ? `${file.filename} (error)`
+                    : file.title;
+                select.appendChild(opt);
             }
 
-            html += '</ul></div>';
-            listContainer.innerHTML = html;
+            this.updateSelectedTestDataDescription();
 
         } catch (error) {
-            listContainer.innerHTML = `<p style="color: #ef4444;">Error loading test data list: ${error.message}</p>`;
+            select.innerHTML = '<option value="">Error</option>';
+            statusContainer.innerHTML = `<p style="color: #ef4444;">Error loading test data list: ${error.message}</p>`;
+        }
+    },
+
+    updateSelectedTestDataDescription() {
+        const select = document.getElementById('select-testdata-file');
+        const desc = document.getElementById('test-data-selected-desc');
+        const file = this._testDataCache.find(f => f.filename === select.value);
+
+        if (!file) {
+            desc.textContent = '';
+            return;
+        }
+        if (file.error) {
+            desc.style.color = '#ef4444';
+            desc.textContent = `Error parsing ${file.filename}: ${file.description}`;
+        } else {
+            desc.style.color = '#9ca3af';
+            desc.textContent = `${file.filename} — ${file.description}`;
+        }
+    },
+
+    async loadSelectedTestData() {
+        const select = document.getElementById('select-testdata-file');
+        const statusContainer = document.getElementById('test-data-status');
+        const btn = document.getElementById('btn-load-selected-testdata');
+        const filename = select.value;
+
+        if (!filename) {
+            statusContainer.innerHTML = `<p style="color: #f59e0b;">No file selected.</p>`;
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Loading…';
+        statusContainer.innerHTML = `<p style="color: #3b82f6;">Loading ${filename}…</p>`;
+
+        try {
+            const result = await loadTestData(filename, false);
+
+            let html = '<div style="font-size: 0.9em;">';
+            if (result.loaded.length) {
+                const s = result.loaded[0];
+                html += `<p style="color: #10b981;"><strong>Loaded:</strong> ${s.title} (ID: ${s.story_id})</p>`;
+            }
+            if (result.errors.length) {
+                html += `<p style="color: #ef4444;">Errors:</p><ul style="margin: 5px 0; padding-left: 20px;">`;
+                for (const err of result.errors) {
+                    html += `<li>${err.filename}: ${err.error}</li>`;
+                }
+                html += '</ul>';
+            }
+            html += '</div>';
+            statusContainer.innerHTML = html;
+
+            if (typeof loadStories === 'function') {
+                await loadStories();
+            }
+
+        } catch (error) {
+            statusContainer.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Load Selected';
         }
     },
 
@@ -266,10 +335,10 @@ const SettingsComponent = {
     },
 
     /**
-     * Clear all test data
+     * Delete stories that have no playthroughs (kept for backward compatibility).
      */
     async clearAllTestData() {
-        if (!confirm('WARNING: This will delete all stories that don\'t have active playthroughs. Are you sure?')) {
+        if (!confirm('Delete all stories that have no playthroughs?\n\nStories with active playthroughs will be kept.')) {
             return;
         }
 
@@ -277,34 +346,100 @@ const SettingsComponent = {
         const btn = document.getElementById('btn-clear-testdata');
 
         btn.disabled = true;
-        btn.textContent = 'Clearing...';
-        statusContainer.innerHTML = '<p style="color: #f59e0b;">Clearing test data...</p>';
+        btn.textContent = 'Deleting…';
+        statusContainer.innerHTML = '<p style="color: #f59e0b;">Deleting unused templates…</p>';
 
         try {
             const result = await clearTestData();
 
-            let html = '<div style="font-size: 0.9em;">';
-            html += `<p style="color: #10b981;"><strong>Success!</strong></p>`;
-            html += `<p>Deleted ${result.deleted} template stories</p>`;
-            html += `<p>Kept ${result.kept} stories with active playthroughs</p>`;
-            html += '</div>';
+            statusContainer.innerHTML =
+                `<div style="font-size: 0.9em;">
+                    <p style="color: #10b981;"><strong>Done.</strong></p>
+                    <p>Deleted ${result.deleted} unused story templates</p>
+                    <p>Kept ${result.kept} stories with active playthroughs</p>
+                </div>`;
 
-            statusContainer.innerHTML = html;
-
-            // Refresh the test data list
             await this.loadTestDataList();
-
-            // Refresh the stories list if the loadStories function is available
-            if (typeof loadStories === 'function') {
-                console.log('Refreshing stories list after clearing test data...');
-                await loadStories();
-            }
+            if (typeof loadStories === 'function') await loadStories();
 
         } catch (error) {
             statusContainer.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Clear All Templates';
+            btn.textContent = 'Delete Unused Templates';
+        }
+    },
+
+    /**
+     * Delete every playthrough (sessions, conversations, scene state, flags,
+     * playthrough-scoped entities). Stories and templates remain.
+     */
+    async deleteAllPlaythroughs() {
+        if (!confirm('Delete ALL playthroughs?\n\nThis removes every playthrough, its sessions, conversations, scene state, and flags.\n\nStories themselves are kept. This cannot be undone.')) {
+            return;
+        }
+
+        const statusContainer = document.getElementById('test-data-status');
+        const btn = document.getElementById('btn-delete-playthroughs');
+
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+        statusContainer.innerHTML = '<p style="color: #f59e0b;">Deleting playthroughs…</p>';
+
+        try {
+            const result = await deleteAllPlaythroughs();
+
+            statusContainer.innerHTML =
+                `<div style="font-size: 0.9em;">
+                    <p style="color: #10b981;"><strong>Done.</strong></p>
+                    <p>Deleted ${result.deleted_playthroughs} playthroughs</p>
+                </div>`;
+
+            if (typeof loadStories === 'function') await loadStories();
+
+        } catch (error) {
+            statusContainer.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Delete All Playthroughs';
+        }
+    },
+
+    /**
+     * Nuke everything: every story AND every playthrough.
+     */
+    async deleteAllStoriesAndPlaythroughs() {
+        if (!confirm('Delete ALL stories AND playthroughs?\n\nThis is a full wipe of all game data: stories, characters, relationships, locations, story arcs, playthroughs, sessions, conversations.\n\nThis cannot be undone.')) {
+            return;
+        }
+        if (!confirm('Are you absolutely sure? This deletes EVERYTHING.')) {
+            return;
+        }
+
+        const statusContainer = document.getElementById('test-data-status');
+        const btn = document.getElementById('btn-delete-everything');
+
+        btn.disabled = true;
+        btn.textContent = 'Deleting…';
+        statusContainer.innerHTML = '<p style="color: #f59e0b;">Wiping all game data…</p>';
+
+        try {
+            const result = await deleteAllStoriesAndPlaythroughs();
+
+            statusContainer.innerHTML =
+                `<div style="font-size: 0.9em;">
+                    <p style="color: #10b981;"><strong>Done.</strong></p>
+                    <p>Deleted ${result.deleted_stories} stories and ${result.deleted_playthroughs} playthroughs</p>
+                </div>`;
+
+            await this.loadTestDataList();
+            if (typeof loadStories === 'function') await loadStories();
+
+        } catch (error) {
+            statusContainer.innerHTML = `<p style="color: #ef4444;"><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Delete All Stories & Playthroughs';
         }
     }
 };

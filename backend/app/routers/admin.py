@@ -436,6 +436,142 @@ async def clear_test_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error clearing test data: {str(e)}")
 
 
+def _delete_playthrough_cascade(db: Session, playthrough_id: int) -> None:
+    """Delete a playthrough and all of its dependent rows."""
+    session_ids = [
+        sid for (sid,) in db.query(models.Session.id)
+        .filter(models.Session.playthrough_id == playthrough_id)
+        .all()
+    ]
+
+    if session_ids:
+        db.query(models.Conversation).filter(
+            models.Conversation.session_id.in_(session_ids)
+        ).delete(synchronize_session=False)
+        db.query(models.SceneState).filter(
+            models.SceneState.session_id.in_(session_ids)
+        ).delete(synchronize_session=False)
+        db.query(models.SceneCharacter).filter(
+            models.SceneCharacter.session_id.in_(session_ids)
+        ).delete(synchronize_session=False)
+
+    db.query(models.Session).filter(
+        models.Session.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.StoryFlag).filter(
+        models.StoryFlag.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.MemoryFlag).filter(
+        models.MemoryFlag.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.Character).filter(
+        models.Character.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.Relationship).filter(
+        models.Relationship.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.Location).filter(
+        models.Location.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.StoryArc).filter(
+        models.StoryArc.playthrough_id == playthrough_id
+    ).delete(synchronize_session=False)
+    db.query(models.Playthrough).filter(
+        models.Playthrough.id == playthrough_id
+    ).delete(synchronize_session=False)
+
+
+@router.delete("/playthroughs/all")
+async def delete_all_playthroughs(db: Session = Depends(get_db)):
+    """
+    Delete every playthrough and all of its sessions, conversations,
+    scene state, flags, and playthrough-scoped characters/relationships/
+    locations/story arcs. Stories and template data are kept intact.
+    """
+    try:
+        playthrough_ids = [pid for (pid,) in db.query(models.Playthrough.id).all()]
+
+        for pid in playthrough_ids:
+            _delete_playthrough_cascade(db, pid)
+
+        db.commit()
+
+        log_notification(
+            db,
+            f"Deleted {len(playthrough_ids)} playthroughs",
+            "database",
+            {"deleted_playthroughs": len(playthrough_ids)}
+        )
+
+        return {
+            "status": "success",
+            "deleted_playthroughs": len(playthrough_ids)
+        }
+
+    except Exception as e:
+        db.rollback()
+        log_error(db, f"Error deleting playthroughs: {str(e)}", "database")
+        raise HTTPException(status_code=500, detail=f"Error deleting playthroughs: {str(e)}")
+
+
+@router.delete("/all")
+async def delete_all_stories_and_playthroughs(db: Session = Depends(get_db)):
+    """
+    Nuke everything: every playthrough (with cascade) and every story
+    (with its template characters/relationships/locations/arcs).
+    Leaves the schema in place but empty.
+    """
+    try:
+        playthrough_ids = [pid for (pid,) in db.query(models.Playthrough.id).all()]
+        for pid in playthrough_ids:
+            _delete_playthrough_cascade(db, pid)
+
+        story_ids = [sid for (sid,) in db.query(models.Story.id).all()]
+
+        if story_ids:
+            db.query(models.Character).filter(
+                models.Character.story_id.in_(story_ids),
+                models.Character.playthrough_id.is_(None)
+            ).delete(synchronize_session=False)
+            db.query(models.Relationship).filter(
+                models.Relationship.story_id.in_(story_ids),
+                models.Relationship.playthrough_id.is_(None)
+            ).delete(synchronize_session=False)
+            db.query(models.Location).filter(
+                models.Location.story_id.in_(story_ids),
+                models.Location.playthrough_id.is_(None)
+            ).delete(synchronize_session=False)
+            db.query(models.StoryArc).filter(
+                models.StoryArc.story_id.in_(story_ids),
+                models.StoryArc.playthrough_id.is_(None)
+            ).delete(synchronize_session=False)
+
+        deleted_stories = db.query(models.Story).delete(synchronize_session=False)
+
+        db.commit()
+
+        log_notification(
+            db,
+            f"Deleted everything: {len(playthrough_ids)} playthroughs, {deleted_stories} stories",
+            "database",
+            {
+                "deleted_playthroughs": len(playthrough_ids),
+                "deleted_stories": deleted_stories
+            }
+        )
+
+        return {
+            "status": "success",
+            "deleted_playthroughs": len(playthrough_ids),
+            "deleted_stories": deleted_stories
+        }
+
+    except Exception as e:
+        db.rollback()
+        log_error(db, f"Error deleting all data: {str(e)}", "database")
+        raise HTTPException(status_code=500, detail=f"Error deleting all data: {str(e)}")
+
+
 # =============================================================================
 # TESTER / DEBUG ENDPOINTS
 # =============================================================================
