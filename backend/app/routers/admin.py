@@ -459,46 +459,36 @@ async def clear_test_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error clearing test data: {str(e)}")
 
 
+_PLAYTHROUGH_SCOPED_MODELS = (
+    # Conversation/scene rows first (leaves), then their parents, then the
+    # rest. Each model has a playthrough_id column we can filter on directly,
+    # so no session_id detour is needed.
+    models.Conversation,
+    models.SceneCharacter,
+    models.SceneState,
+    models.MemoryFlag,
+    models.CharacterKnowledge,
+    models.CharacterState,
+    models.CharacterGoal,
+    models.CharacterMemory,
+    models.CharacterBelief,
+    models.CharacterAvoidance,
+    models.StoryFlag,
+    models.StoryEpisode,
+    models.StoryArc,
+    models.Relationship,
+    models.Location,
+    models.Character,
+    models.Session,
+)
+
+
 def _delete_playthrough_cascade(db: Session, playthrough_id: int) -> None:
-    """Delete a playthrough and all of its dependent rows."""
-    session_ids = [
-        sid for (sid,) in db.query(models.Session.id)
-        .filter(models.Session.playthrough_id == playthrough_id)
-        .all()
-    ]
-
-    if session_ids:
-        db.query(models.Conversation).filter(
-            models.Conversation.session_id.in_(session_ids)
+    """Delete a playthrough and every playthrough-scoped row that references it."""
+    for model in _PLAYTHROUGH_SCOPED_MODELS:
+        db.query(model).filter(
+            model.playthrough_id == playthrough_id
         ).delete(synchronize_session=False)
-        db.query(models.SceneState).filter(
-            models.SceneState.session_id.in_(session_ids)
-        ).delete(synchronize_session=False)
-        db.query(models.SceneCharacter).filter(
-            models.SceneCharacter.session_id.in_(session_ids)
-        ).delete(synchronize_session=False)
-
-    db.query(models.Session).filter(
-        models.Session.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
-    db.query(models.StoryFlag).filter(
-        models.StoryFlag.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
-    db.query(models.MemoryFlag).filter(
-        models.MemoryFlag.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
-    db.query(models.Character).filter(
-        models.Character.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
-    db.query(models.Relationship).filter(
-        models.Relationship.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
-    db.query(models.Location).filter(
-        models.Location.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
-    db.query(models.StoryArc).filter(
-        models.StoryArc.playthrough_id == playthrough_id
-    ).delete(synchronize_session=False)
     db.query(models.Playthrough).filter(
         models.Playthrough.id == playthrough_id
     ).delete(synchronize_session=False)
@@ -1492,61 +1482,12 @@ async def reset_playthrough(playthrough_id: int, db: Session = Depends(get_db)):
 
         story_id = playthrough.story_id
 
-        # Delete all sessions and their conversations
-        sessions = db.query(models.Session).filter(
-            models.Session.playthrough_id == playthrough_id
-        ).all()
-
-        for session in sessions:
-            # Delete conversations
-            db.query(models.Conversation).filter(
-                models.Conversation.session_id == session.id
-            ).delete()
-
-            # Delete scene states
-            db.query(models.SceneState).filter(
-                models.SceneState.session_id == session.id
-            ).delete()
-
-            # Delete scene characters
-            db.query(models.SceneCharacter).filter(
-                models.SceneCharacter.session_id == session.id
-            ).delete()
-
-        # Delete sessions
-        db.query(models.Session).filter(
-            models.Session.playthrough_id == playthrough_id
-        ).delete()
-
-        # Delete story flags
-        db.query(models.StoryFlag).filter(
-            models.StoryFlag.playthrough_id == playthrough_id
-        ).delete()
-
-        # Delete memory flags
-        db.query(models.MemoryFlag).filter(
-            models.MemoryFlag.playthrough_id == playthrough_id
-        ).delete()
-
-        # Delete playthrough-specific characters
-        db.query(models.Character).filter(
-            models.Character.playthrough_id == playthrough_id
-        ).delete()
-
-        # Delete playthrough-specific relationships
-        db.query(models.Relationship).filter(
-            models.Relationship.playthrough_id == playthrough_id
-        ).delete()
-
-        # Delete playthrough-specific locations
-        db.query(models.Location).filter(
-            models.Location.playthrough_id == playthrough_id
-        ).delete()
-
-        # Delete playthrough-specific story arcs
-        db.query(models.StoryArc).filter(
-            models.StoryArc.playthrough_id == playthrough_id
-        ).delete()
+        # Delete every playthrough-scoped row (keeps the Playthrough itself
+        # so we can reset its current_location/current_time below).
+        for model in _PLAYTHROUGH_SCOPED_MODELS:
+            db.query(model).filter(
+                model.playthrough_id == playthrough_id
+            ).delete(synchronize_session=False)
 
         # Reset playthrough to initial state
         story = db.query(models.Story).filter(models.Story.id == story_id).first()
