@@ -352,6 +352,23 @@ async function clearTestData() {
     return apiRequest('/admin/test-data/clear', { method: 'DELETE' });
 }
 
+/**
+ * Delete every playthrough and all of its child rows (sessions, conversations,
+ * scene state, flags, playthrough-scoped entities). Stories stay intact.
+ * @returns {Promise<Object>}
+ */
+async function deleteAllPlaythroughs() {
+    return apiRequest('/admin/playthroughs/all', { method: 'DELETE' });
+}
+
+/**
+ * Delete every story and every playthrough (full database wipe of game data).
+ * @returns {Promise<Object>}
+ */
+async function deleteAllStoriesAndPlaythroughs() {
+    return apiRequest('/admin/all', { method: 'DELETE' });
+}
+
 // =============================================================================
 // Tester / Debug Functions
 // =============================================================================

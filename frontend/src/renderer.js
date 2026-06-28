@@ -394,12 +394,28 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Test Data Management
+    document.getElementById('btn-load-selected-testdata').addEventListener('click', () => {
+        SettingsComponent.loadSelectedTestData();
+    });
+
     document.getElementById('btn-load-all-testdata').addEventListener('click', () => {
         SettingsComponent.loadAllTestData();
     });
 
     document.getElementById('btn-refresh-testdata').addEventListener('click', () => {
         SettingsComponent.loadTestDataList();
+    });
+
+    document.getElementById('select-testdata-file').addEventListener('change', () => {
+        SettingsComponent.updateSelectedTestDataDescription();
+    });
+
+    document.getElementById('btn-delete-playthroughs').addEventListener('click', () => {
+        SettingsComponent.deleteAllPlaythroughs();
+    });
+
+    document.getElementById('btn-delete-everything').addEventListener('click', () => {
+        SettingsComponent.deleteAllStoriesAndPlaythroughs();
     });
 
     document.getElementById('btn-clear-testdata').addEventListener('click', () => {

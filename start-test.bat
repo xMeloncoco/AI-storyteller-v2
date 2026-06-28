@@ -128,19 +128,6 @@ if errorlevel 1 (
 echo [OK] Backend is ready
 echo.
 
-REM Ask about test data
-set /p LOAD_DATA="Load test data? (y/n, default: y): "
-if "!LOAD_DATA!"=="" set LOAD_DATA=y
-
-if /i "!LOAD_DATA!"=="y" (
-    echo [Loading test data...]
-    cd /d "%BACKEND_DIR%"
-    call venv\Scripts\activate.bat
-    python load_test_data.py
-    echo [OK] Test data loaded
-    echo.
-)
-
 REM Start Frontend
 echo [Starting frontend application...]
 cd /d "%FRONTEND_DIR%"
@@ -165,17 +152,6 @@ echo   Backend:  backend.log
 echo   Frontend: frontend.log
 echo.
 echo To stop:
-echo   Run stop-test.bat or close the backend/frontend windows
+echo   Close the backend/frontend windows
 echo.
-echo Press any key to open log viewer...
-pause >nul
-
-REM Open log viewer
-start "Backend Logs" powershell -Command "Get-Content -Path '%SCRIPT_DIR%backend.log' -Wait -Tail 20"
-start "Frontend Logs" powershell -Command "Get-Content -Path '%SCRIPT_DIR%frontend.log' -Wait -Tail 20"
-
-echo.
-echo Log viewers opened in separate windows
-echo You can close this window - services will continue running
-echo.
-pause
+echo You can close this window - services will continue running.
