@@ -11,7 +11,7 @@ Important: Good prompts are crucial for AI consistency and quality!
 """
 from typing import Any, Dict, List, Union
 
-from ..pipeline.context_bundle import ContextBundle, render_legacy_context
+from ..pipeline.prompt_bundle import PromptBundle, render_legacy_prompt
 
 
 class PromptTemplates:
@@ -22,7 +22,7 @@ class PromptTemplates:
 
     @staticmethod
     def story_generation_prompt(
-        context: Union[ContextBundle, str],
+        bundle: Union[PromptBundle, str],
         user_action: str,
         character_decisions: List[Dict[str, Any]],
         story_info: Dict[str, Any],
@@ -30,16 +30,16 @@ class PromptTemplates:
         """
         Main story generation prompt.
 
-        Post-R2: the canonical input is a ContextBundle and the template
+        Post-R2: the canonical input is a PromptBundle and the template
         decides how the context section is rendered (single source of
         truth for "what the model sees"). The legacy string form is still
         accepted so older call sites don't break in lockstep — it will be
         removed once M2.3 lands.
         """
-        if isinstance(context, ContextBundle):
-            context_text = render_legacy_context(context)
+        if isinstance(bundle, PromptBundle):
+            context_text = render_legacy_prompt(bundle)
         else:
-            context_text = context
+            context_text = bundle
 
         # Build character decision summaries
         decision_text = ""

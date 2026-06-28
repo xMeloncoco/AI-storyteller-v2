@@ -34,7 +34,7 @@ Positions, relationships, who‑knows‑what, inventory, emotional state, goals,
 Every AI generation runs through a cheap validator pass. The validator asks narrow yes/no questions (did the user's character speak? did anyone do something physically impossible? did a character reference something they couldn't know?). On fail → repair or regenerate. **The validator is not optional.**
 
 ### P3. Knowledge is scoped per character.
-When we build context for a character, we filter to **only what that character witnessed, was told, or could plausibly deduce**. Global memory dumps are how characters "know" things they shouldn't. Never feed a character context they wouldn't have.
+When we assemble the prompt input for a character, we filter their in‑world context to **only what that character witnessed, was told, or could plausibly deduce**. Global memory dumps are how characters "know" things they shouldn't. Never feed a character context they wouldn't have.
 
 ### P4. Structured input, not free text.
 User input is parsed into separate fields: **speech**, **action**, **thought**. Thoughts are *never* shown to NPCs. Actions are world events. Speech is what NPCs can hear. This is the single cheapest fix for "the AI treated my thought like dialogue."
@@ -75,7 +75,7 @@ Every change follows this loop. Do **not** skip the read and the plan.
 6. **Add or update logs** for any new stage/branch. Logs are part of the deliverable, not optional.
 7. **Run the app** (`./start-test.sh`) and trigger the path you changed. Watch the logs. If you can't run it, say so explicitly.
 8. **Tick the checklist** item in this file with a one‑line dated note. Update `FILE_MAP.md` if file responsibilities changed.
-9. **Commit** with a short message naming the checklist item (e.g. `feat(M2.3): per-character context filtering`).
+9. **Commit** with a short message naming the checklist item (e.g. `feat(M2.3): witness-filtered per-character prompt`).
 
 If a step in the checklist is huge, **break it into sub‑steps in this file** before starting and tick them off as you go.
 
@@ -101,8 +101,10 @@ Categories to use (matches `Log.log_category`): `system`, `database`, `ai`, `mem
 
 This is what we are building toward. Items in the checklist below are the steps to get there. Don't pre‑build anything below that isn't on the list.
 
+> **Vocabulary (R8):** "**prompt**" = what we send to the LLM (the structured `PromptBundle`, rendered for the model). "**context**" = the in‑world background of a character or scene — their situation, what they know, where they are, what they're feeling. Each in‑world context (character sheet, spatial state, director pressure, knowledge) gets assembled *into* the prompt, but isn't itself called "the prompt."
+
 ```
-INTAKE → PARSE → TRIGGER → STATE_APPLY → DIRECTOR → CONTEXT(per‑character, knowledge‑scoped)
+INTAKE → PARSE → TRIGGER → STATE_APPLY → DIRECTOR → PROMPT_BUILD(per‑character, witness‑filtered)
        → SCENE_SIMULATION (per NPC) → GENERATION → VALIDATION (regex + AI critic, repair loop)
        → PRESENTATION → STATE_UPDATE (mutations + memory writes, witness‑tagged)
 ```
@@ -131,11 +133,21 @@ Two model tiers:
 
 See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later step possible without breaking the whole.
 
-- [ ] **M0.1** Extract a `Pipeline` class with one method per stage. `chat.py:send_message` should be ~30 lines that just orchestrates `pipeline.run(user_message)`.
-- [ ] **M0.2** Split `ContextBuilder.build_full_context()` into named getters that return *typed dicts*, not concatenated strings. Add a `build_for_character(character_id)` entry point that the per‑character path will use later.
-- [ ] **M0.3** Add a `pipeline_stage` log helper that auto‑tags every log inside a `with stage("CONTEXT"):` block. Update existing log sites to use it.
-- [ ] **M0.4** Confirm the validator is wired and *actually blocks* (current code logs and continues). Add a config flag `VALIDATION_MODE=warn|block|repair` defaulting to `warn`, so future steps can flip it.
-- [ ] **M0.5** Move all magic numbers (token limits, context message counts, importance thresholds) into `config.py` with named constants. No more `[:10]` and `min_importance=7` scattered in code.
+- [x] **M0.1** Extract a `Pipeline` class with one method per stage. `chat.py:send_message` should be ~30 lines that just orchestrates `pipeline.run(user_message)`.
+  - 2026-06-28: `refactor(R1): extract ChatPipeline class` — `app.pipeline.ChatPipeline` owns every stage; `routers/chat.py` is now a thin shell.
+- [x] **M0.2** Split `ContextBuilder.build_full_context()` into named getters that return *typed dicts*, not concatenated strings. Add a `build_for_character(character_id)` entry point that the per‑character path will use later.
+  - 2026-06-28: `refactor(R2): typed ContextBundle with byte-for-byte legacy renderer` — typed `ContextBundle` in `pipeline/context_bundle.py`; `ContextBuilder.build_bundle()` and `build_for_character()` added; `build_full_context()` is now a deprecated alias.
+- [x] **M0.3** Add a `pipeline_stage` log helper that auto‑tags every log inside a `with stage("CONTEXT"):` block. Update existing log sites to use it.
+  - 2026-06-28: `refactor(R3): stage-tagged logging via pipeline_stage context manager` — contextvar-backed `pipeline_stage()` / `@pipeline_stage_method()` decorates every ChatPipeline method; `AppLogger` auto-injects `details["stage"]`; tester logs panel filters on it.
+- [x] **M0.4** Confirm the validator is wired and *actually blocks* (current code logs and continues). Add a config flag `VALIDATION_MODE=warn|block|repair` defaulting to `warn`, so future steps can flip it.
+  - 2026-06-28: `refactor(R4): wire VALIDATION_MODE so the validator can actually block/repair` — `settings.validation_mode` (warn|block|repair, default warn). `repair` regenerates once with an addendum on `controls_user`, re-validates, falls back to original on `validation.unrepairable`. M3 expands repair strategies.
+- [x] **M0.5** Move all magic numbers (token limits, context message counts, importance thresholds) into `config.py` with named constants. No more `[:10]` and `min_importance=7` scattered in code.
+  - 2026-06-28: `refactor(R5): lift tuning literals into config.py with trade-off comments` — seven new settings (`memory_flag_min_importance`, `memory_flag_top_n`, `max_dialogue_words`, `relationship_update_temperature`, `relationship_min_change`, `story_flag_analysis_temperature`, `generate_more_max_tokens`), each with a trade-off comment.
+
+> **Pre-work also done (no matching M0 box):**
+> - 2026-06-28: `refactor(R6): add witness/told_to columns and idempotent backfill migration` — stages the schema for M2.x per-character knowledge filtering. CRUD reads still ignore the columns; M2.3 will turn on filtering.
+> - 2026-06-28: R7 sanity sweep — `FILE_MAP.md` updated for `pipeline/` and `migrations.py`; static check confirmed no `except: pass`. `start-test.sh` runtime verification is the last gate before deleting `REFACTOR_FIRST.md`.
+> - 2026-06-28: `refactor(R8): vocabulary cleanup (context → prompt)` — `ContextBundle` → `PromptBundle`, `ContextBuilder` → `PromptBuilder`, pipeline stage `CONTEXT` → `PROMPT_BUILD`, `context_gather()` → `build_prompt()`, `build_full_context` → `build_prompt_string`, `AppLogger.prompt()` added (with `.context()` kept as deprecated alias for one commit), tester tab "AI Context" → "Prompt", `/admin/tester/context/` → `/admin/tester/prompt/`. After R8: "prompt" / "bundle" = LLM input; "context" = in-world background.
 
 ---
 
@@ -146,15 +158,15 @@ See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later 
 - [ ] **M1.3** Backend INTAKE stage parses raw input into `IntakeMessage`. Small‑model fallback parser for ambiguous input.
 - [ ] **M1.4** Persist the parsed fields on `Conversation` rows (add columns `speech`, `action`, `thought`). Backfill existing rows with `speech = message`.
 - [ ] **M1.5** Validator rule: if generated text contains the user character's name as a speaker (`Name:`, `Name said`), **regenerate**, do not just warn.
-- [ ] **M1.6** When building context for an NPC, **exclude all user `thought` content**. Add a log line showing what was excluded.
+- [ ] **M1.6** When assembling the prompt input for an NPC, **exclude all user `thought` content**. Add a log line showing what was excluded.
 
 ---
 
-### M2 — Per‑character, knowledge‑scoped context (kills problems #2, #3, #7)
+### M2 — Per‑character, witness‑filtered prompt input (kills problems #2, #3, #7)
 
 - [ ] **M2.1** Implement a `WitnessTag` model (or reuse `CharacterKnowledge` + `MemoryFlag`) so every fact records `who_witnessed` (list of character ids) and `who_was_told` (list of character ids).
 - [ ] **M2.2** STATE_UPDATE: when storing a new memory/flag, **always** compute and store witnesses from the current `scene_characters` list. Never write a fact without witnesses.
-- [ ] **M2.3** CONTEXT_GATHERING: replace the single `build_full_context()` with `build_for_character(char_id)` that filters `CharacterMemory`, `CharacterKnowledge`, `MemoryFlag` and (later) ChromaDB results to those where the character is a witness or was told.
+- [ ] **M2.3** PROMPT_BUILD: replace the single `build_prompt_string()` with `build_prompt_bundle_for_character(char_id)` that filters `CharacterMemory`, `CharacterKnowledge`, `MemoryFlag` and (later) ChromaDB results to those where the character is a witness or was told. Remove the deprecated `build_prompt_string` once this lands.
 - [ ] **M2.4** Re‑inject the **character sheet** (values, fears, would_never_do, would_always_do, decision_style, verbal_patterns, current_emotional_state, top 3 goals, internal_contradiction) at the top of every prompt that involves that character. Drift starts when these dilute.
 - [ ] **M2.5** Add a logger line per character per turn: `"Character X sees N memories, M knowledge items, K flags"` — so it's obvious from logs when retrieval is empty.
 

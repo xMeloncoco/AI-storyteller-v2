@@ -355,12 +355,13 @@ async function getPlaythroughData(playthroughId) {
 }
 
 /**
- * Get current context window for a session
+ * Get the current prompt input (what the AI would see) for a session.
+ * Vocabulary (R8): "prompt" = LLM input. "context" = in-world background.
  * @param {number} sessionId - Session ID
- * @returns {Promise<Object>} Context window data
+ * @returns {Promise<Object>} Prompt window data
  */
-async function getContextWindow(sessionId) {
-    return apiRequest(`/admin/tester/context/${sessionId}`);
+async function getPromptWindow(sessionId) {
+    return apiRequest(`/admin/tester/prompt/${sessionId}`);
 }
 
 /**

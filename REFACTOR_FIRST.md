@@ -29,12 +29,12 @@ None of these are big rewrites. They're surgical. Each one unlocks a section of 
 
 ---
 
-## R1 — Extract a `Pipeline` class (unblocks M0.1)
+## R1 — Extract a `Pipeline` class (unblocks M0.1) ✅ 2026-06-28
 
 **Goal:** `routers/chat.py:send_message` becomes a thin HTTP handler that calls `pipeline.run(...)`. The pipeline lives in its own module so each stage is a method we can edit in isolation.
 
-- [ ] Create `backend/app/pipeline/__init__.py` and `backend/app/pipeline/chat_pipeline.py`.
-- [ ] Define `ChatPipeline(db, session_id)` with one method per stage matching `PIPELINE_STAGES.md`:
+- [x] Create `backend/app/pipeline/__init__.py` and `backend/app/pipeline/chat_pipeline.py`.
+- [x] Define `ChatPipeline(db, session_id)` with one method per stage matching `PIPELINE_STAGES.md`:
   - `intake(user_message) -> IntakeResult`
   - `trigger_detection(intake) -> TriggerResult`
   - `context_gather() -> ContextBundle`
@@ -43,79 +43,79 @@ None of these are big rewrites. They're surgical. Each one unlocks a section of 
   - `validate(text, decisions) -> ValidationResult`
   - `present(text) -> Conversation` (writes the narrator row)
   - `state_update(text, decisions, validation) -> StateUpdateSummary`
-- [ ] Move the current logic out of `send_message` into the matching methods. **Do not change behavior.**
-- [ ] `send_message` becomes: parse `ChatRequest`, instantiate `ChatPipeline`, `await pipeline.run(message)`, shape `ChatResponse`. Should be < 40 lines.
-- [ ] Same for `generate_more` — give it its own pipeline method or its own thin class.
+- [x] Move the current logic out of `send_message` into the matching methods. **Do not change behavior.**
+- [x] `send_message` becomes: parse `ChatRequest`, instantiate `ChatPipeline`, `await pipeline.run(message)`, shape `ChatResponse`. Should be < 40 lines.
+- [x] Same for `generate_more` — give it its own pipeline method or its own thin class.
 
 **How to verify:** load a story, run a turn before and after. Output text should be similar (allow LLM variance). Logs should still appear per stage.
 
 ---
 
-## R2 — Type the context bundle (unblocks M0.2 and M2.x)
+## R2 — Type the context bundle (unblocks M0.2 and M2.x) ✅ 2026-06-28
 
 **Goal:** stop passing a single giant string into prompts. The pipeline carries a structured `ContextBundle` and the prompt templates compose it on demand.
 
-- [ ] Add `backend/app/pipeline/context_bundle.py` with a `ContextBundle` dataclass (or Pydantic model): `story`, `scene`, `characters_present: List[CharacterView]`, `history: List[Conversation]`, `relationships: List[RelationshipView]`, `active_arcs`, `memory_flags`.
-- [ ] `CharacterView` includes the character sheet block separately from current state and goals — these will be re-injected fresh each turn (P2.4 / M2.4).
-- [ ] Refactor `ContextBuilder` so its public surface is:
+- [x] Add `backend/app/pipeline/context_bundle.py` with a `ContextBundle` dataclass (or Pydantic model): `story`, `scene`, `characters_present: List[CharacterView]`, `history: List[Conversation]`, `relationships: List[RelationshipView]`, `active_arcs`, `memory_flags`.
+- [x] `CharacterView` includes the character sheet block separately from current state and goals — these will be re-injected fresh each turn (P2.4 / M2.4).
+- [x] Refactor `ContextBuilder` so its public surface is:
   - `build_bundle() -> ContextBundle` (replaces the old `build_full_context`).
   - `build_for_character(character_id) -> ContextBundle` (returns now, no filtering yet — M2.3 will add filtering).
-- [ ] `PromptTemplates.story_generation_prompt` accepts a `ContextBundle`, not a pre-baked string. It does the assembly. (This is the single place where "what the model sees" is decided.)
-- [ ] Keep `build_full_context` as a deprecated alias that calls `build_bundle().to_string()` so nothing breaks in one go. Remove it once M2.3 lands.
+- [x] `PromptTemplates.story_generation_prompt` accepts a `ContextBundle`, not a pre-baked string. It does the assembly. (This is the single place where "what the model sees" is decided.)
+- [x] Keep `build_full_context` as a deprecated alias that calls `build_bundle().to_string()` so nothing breaks in one go. Remove it once M2.3 lands.
 
 **How to verify:** the assembled prompt sent to the LLM should be byte-for-byte (or near) what it was before. Log it before and after and diff.
 
 ---
 
-## R3 — Stage-tagged logging (unblocks M0.3)
+## R3 — Stage-tagged logging (unblocks M0.3) ✅ 2026-06-28
 
 **Goal:** every log line knows which stage it came from, without the caller having to remember.
 
-- [ ] In `utils/logger.py`, add a `pipeline_stage(stage_name)` context manager. Inside it, all `AppLogger` calls auto-tag `details["stage"] = stage_name` and prefix the printed line with `[STAGE:NAME]`.
-- [ ] Each method in `ChatPipeline` wraps its body in `with pipeline_stage("INTAKE"):` (etc).
-- [ ] Existing `logger.notification/ai_decision/context/error` calls stay; the wrapper just enriches them.
-- [ ] Tester panel log viewer: add a stage filter dropdown (read the `stage` field from `details`).
+- [x] In `utils/logger.py`, add a `pipeline_stage(stage_name)` context manager. Inside it, all `AppLogger` calls auto-tag `details["stage"] = stage_name` and prefix the printed line with `[STAGE:NAME]`.
+- [x] Each method in `ChatPipeline` wraps its body in `with pipeline_stage("INTAKE"):` (etc). _(Used the `@pipeline_stage_method("STAGE")` decorator form which handles async too.)_
+- [x] Existing `logger.notification/ai_decision/context/error` calls stay; the wrapper just enriches them.
+- [x] Tester panel log viewer: add a stage filter dropdown (read the `stage` field from `details`). _(Dropdown is built dynamically from stages present in the loaded logs.)_
 
 **How to verify:** run a turn, open the log viewer, confirm every entry has a stage tag and the dropdown filters correctly.
 
 ---
 
-## R4 — Make the validator actually do something (unblocks M0.4 and M3.x)
+## R4 — Make the validator actually do something (unblocks M0.4 and M3.x) ✅ 2026-06-28
 
 **Goal:** the validator can fail a turn. Right now it doesn't. Even before we add the AI critic, the regex checks for *"AI controlling the user character"* should already cause a regeneration — that's the #1 user complaint and we already detect it.
 
-- [ ] Add `VALIDATION_MODE` to `config.py` with values `warn` (default, current behavior), `block` (return an error to the user — for tests), `repair` (regenerate up to N times).
-- [ ] In `ChatPipeline.validate(...)`:
+- [x] Add `VALIDATION_MODE` to `config.py` with values `warn` (default, current behavior), `block` (return an error to the user — for tests), `repair` (regenerate up to N times). _(Setting is `validation_mode`; repair regenerates once for now per M3.4's later "cap retries" requirement.)_
+- [x] In `ChatPipeline.validate(...)`:
   - `warn` → log issues, return text unchanged.
   - `block` → raise a 422 with the issues listed.
   - `repair` → if `controls_user` issue is present, regenerate **once** with an addendum prompt: *"You previously wrote `<span>`. Do not write or imply what `<user_name>` says, thinks, or does. Rewrite without that."* Re-validate. If still bad, log `validation.unrepairable` and return the original.
-- [ ] Default stays `warn` so behavior doesn't change yet. The plumbing is what M3 needs.
-- [ ] Add a clear log entry on each path (`validation.passed`, `validation.warned`, `validation.repaired`, `validation.unrepairable`).
+- [x] Default stays `warn` so behavior doesn't change yet. The plumbing is what M3 needs.
+- [x] Add a clear log entry on each path (`validation.passed`, `validation.warned`, `validation.repaired`, `validation.unrepairable`). _(`validation.blocked` and `validation.repair_attempt` added too.)_
 
 **How to verify:** flip `VALIDATION_MODE=repair`, force a bad output (e.g., temporarily relax the system prompt), confirm regeneration happens and is logged.
 
 ---
 
-## R5 — Constants into `config.py` (unblocks M0.5)
+## R5 — Constants into `config.py` (unblocks M0.5) ✅ 2026-06-28
 
 **Goal:** every tuning knob in one file.
 
-- [ ] Grep for hardcoded numbers in `context_builder.py`, `validator.py`, `routers/chat.py`, `relationships/updater.py`, `story/progression.py`. Common offenders: `[:10]`, `min_importance=7`, `> 50` (dialogue length), `limit=settings.max_context_messages`, retry counts.
-- [ ] Add named constants in `config.py` (e.g. `MEMORY_FLAG_TOP_N = 10`, `MEMORY_FLAG_MIN_IMPORTANCE = 7`, `MAX_DIALOGUE_WORDS = 50`).
-- [ ] Replace the literals with the named settings.
-- [ ] Document each in a comment in `config.py` — when would you change it, what does raising/lowering it do?
+- [x] Grep for hardcoded numbers in `context_builder.py`, `validator.py`, `routers/chat.py`, `relationships/updater.py`, `story/progression.py`. Common offenders: `[:10]`, `min_importance=7`, `> 50` (dialogue length), `limit=settings.max_context_messages`, retry counts.
+- [x] Add named constants in `config.py`: `memory_flag_top_n`, `memory_flag_min_importance`, `max_dialogue_words`, `relationship_update_temperature`, `relationship_min_change`, `story_flag_analysis_temperature`, `generate_more_max_tokens`.
+- [x] Replace the literals with the named settings.
+- [x] Document each in a comment in `config.py` — when would you change it, what does raising/lowering it do?
 
 **How to verify:** behavior identical; greppable by name; comment explains the trade-off.
 
 ---
 
-## R6 — Witness columns on memory tables (unblocks M2.x and M9.x)
+## R6 — Witness columns on memory tables (unblocks M2.x and M9.x) ✅ 2026-06-28
 
 **Goal:** the schema is ready for per-character knowledge filtering before we wire the filtering logic.
 
-- [ ] Add `witnesses` (JSON list of character ids) and `told_to` (JSON list of character ids) columns to `MemoryFlag`, `CharacterMemory`, and `CharacterKnowledge` (if not already there).
-- [ ] Write a tiny migration: for existing rows, default `witnesses` to all characters present in the same `session_id` (best effort), or empty list. Log a `database.backfill` notice per row touched.
-- [ ] **Do not** change retrieval yet. CRUD reads stay the same. We're staging the columns so M2.3 can flip them on.
+- [x] Add `witnesses` (JSON list of character ids) and `told_to` (JSON list of character ids) columns to `MemoryFlag`, `CharacterMemory`, and `CharacterKnowledge` (if not already there).
+- [x] Write a tiny migration: for existing rows, default `witnesses` to all characters present in the same `session_id` (best effort), or empty list. Log a `database.backfill` notice per row touched. _(`backend/app/migrations.py` runs from `init_db()`. Idempotent: PRAGMA-guarded ALTERs, `WHERE witnesses IS NULL` backfill. Verified end-to-end against raw sqlite3.)_
+- [x] **Do not** change retrieval yet. CRUD reads stay the same. We're staging the columns so M2.3 can flip them on.
 
 **How to verify:** new rows include witnesses (you'll need to wire writes in the next step), schema migration runs cleanly on a fresh DB and an existing DB.
 
@@ -125,11 +125,11 @@ None of these are big rewrites. They're surgical. Each one unlocks a section of 
 
 Once R1–R6 are done:
 
-- [ ] Run `start-test.sh`. Load the Starling Contract story. Run 5 turns. Confirm everything still works.
-- [ ] Open the Tester panel. Confirm logs are stage-tagged, all stages appear, no `pass`/swallowed exceptions.
-- [ ] Check `FILE_MAP.md` is updated for the new `pipeline/` directory and the moved logic.
-- [ ] In `BUILD_INSTRUCTIONS.md`, tick M0.1–M0.5 (they map 1:1 to R1–R5; R6/R7 are pre-work for M2 and a sanity gate respectively — note that in the box's dated comment).
-- [ ] Delete this file. Commit the deletion with `chore: refactor pre-work complete, removing REFACTOR_FIRST`.
+- [ ] Run `start-test.sh`. Load the Starling Contract story. Run 5 turns. Confirm everything still works. _(Pending — couldn't run in the agent's remote env; needs a local run by the user before deletion.)_
+- [ ] Open the Tester panel. Confirm logs are stage-tagged, all stages appear, no `pass`/swallowed exceptions. _(Static half done 2026-06-28: greps for `except: pass` and stray `pass` came back clean across `backend/app/`. Visual confirmation that every stage shows up in the dropdown still needs the user's runtime check.)_
+- [x] Check `FILE_MAP.md` is updated for the new `pipeline/` directory and the moved logic. _2026-06-28: added `pipeline/`, `migrations.py`, updated config/context/prompts/validator/logger entries._
+- [x] In `BUILD_INSTRUCTIONS.md`, tick M0.1–M0.5 (they map 1:1 to R1–R5; R6/R7 are pre-work for M2 and a sanity gate respectively — note that in the box's dated comment). _2026-06-28: all five M0 boxes ticked with dated notes pointing at the matching commits; R6/R7 noted under the M0 section._
+- [ ] Delete this file. Commit the deletion with `chore: refactor pre-work complete, removing REFACTOR_FIRST`. _(Hold for the runtime sanity run above.)_
 
 ---
 

@@ -16,15 +16,15 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from .. import crud, models, schemas
-from ..ai.context_builder import ContextBuilder
 from ..ai.llm_manager import LLMManager
+from ..ai.prompt_builder import PromptBuilder
 from ..ai.prompts import PromptTemplates
 from ..ai.validator import ContentValidator
 from ..config import settings
 from ..relationships.updater import RelationshipUpdater
 from ..story.progression import StoryProgressionManager
 from ..utils.logger import AppLogger, log_error, pipeline_stage, pipeline_stage_method
-from .context_bundle import ContextBundle
+from .prompt_bundle import PromptBundle
 
 
 # How many characters of the offending text to quote back to the model in
@@ -105,7 +105,7 @@ class ChatPipeline:
         self.playthrough_id = self.session.playthrough_id
 
         # Stage actors are shared across the methods of this pipeline.
-        self.context_builder = ContextBuilder(db, session_id)
+        self.prompt_builder = PromptBuilder(db, session_id)
         self.llm_manager = LLMManager(db, session_id)
 
     # ------------------------------------------------------------------
@@ -126,10 +126,10 @@ class ChatPipeline:
             )
 
         intake = self.intake(user_message)
-        bundle = self.context_gather()
+        bundle = self.build_prompt()
         trigger = await self.trigger_detection(bundle, user_message)
-        # `bundle` is captured pre-scene-change; rich character info is
-        # re-queried post-scene-change for simulation + response shaping
+        # `bundle` is captured pre-scene-change; rich character info (in-world)
+        # is re-queried post-scene-change for simulation + response shaping
         # (matches the prior handler's ordering exactly).
         rich_characters = self._gather_rich_characters_in_scene()
         decisions = await self.scene_simulation(bundle, rich_characters, user_message)
@@ -176,8 +176,8 @@ class ChatPipeline:
             "system",
         )
 
-        bundle = self.context_builder.build_bundle()
-        rich_characters = self.context_builder.get_all_characters_in_scene_info()
+        bundle = self.prompt_builder.build_prompt_bundle()
+        rich_characters = self.prompt_builder.get_all_characters_in_scene_info()
         last_narrative = self._get_last_narrative()
 
         prompt = PromptTemplates.generate_more_prompt(
@@ -234,28 +234,28 @@ class ChatPipeline:
 
         return IntakeResult(user_conversation=user_conversation, raw_message=user_message)
 
-    @pipeline_stage_method("CONTEXT")
-    def context_gather(self) -> ContextBundle:
-        """Stage 3 - capture the structured bundle every later stage reads.
+    @pipeline_stage_method("PROMPT_BUILD")
+    def build_prompt(self) -> PromptBundle:
+        """Stage 3 (PROMPT_BUILD) - capture the structured bundle every later stage reads.
 
         Built once per turn so that detection and generation see the same
         scene state. Rich character info is queried separately after
         trigger_detection to keep behavior aligned with the prior handler.
         """
-        self.logger.context(
-            "Building full context for AI...",
-            "memory",
+        self.logger.prompt(
+            "Building prompt for AI...",
+            "prompt",
         )
 
-        bundle = self.context_builder.build_bundle()
+        bundle = self.prompt_builder.build_prompt_bundle()
         rendered = bundle.to_string()
 
-        self.logger.context(
-            "FULL CONTEXT BUILT",
-            "memory",
+        self.logger.prompt(
+            "FULL PROMPT BUILT",
+            "prompt",
             {
-                "context_length": len(rendered),
-                "context_preview": (
+                "prompt_length": len(rendered),
+                "prompt_preview": (
                     rendered[:1000] + "..." if len(rendered) > 1000 else rendered
                 ),
             },
@@ -266,7 +266,7 @@ class ChatPipeline:
     @pipeline_stage_method("TRIGGER")
     async def trigger_detection(
         self,
-        bundle: ContextBundle,
+        bundle: PromptBundle,
         user_message: str,
     ) -> TriggerResult:
         """Stage 2 - detect (and apply) scene changes against the snapshot."""
@@ -287,7 +287,7 @@ class ChatPipeline:
         )
 
         if scene_changes.get("location_changed") or scene_changes.get("time_changed"):
-            self.context_builder.update_scene_state(
+            self.prompt_builder.update_scene_state(
                 location=scene_changes.get("new_location"),
                 time_of_day=scene_changes.get("new_time"),
             )
@@ -306,7 +306,7 @@ class ChatPipeline:
     @pipeline_stage_method("SCENE_SIMULATION")
     async def scene_simulation(
         self,
-        bundle: ContextBundle,
+        bundle: PromptBundle,
         rich_characters: List[Dict[str, Any]],
         user_message: str,
     ) -> List[Dict[str, Any]]:
@@ -360,7 +360,7 @@ class ChatPipeline:
     @pipeline_stage_method("GENERATION")
     async def generate(
         self,
-        bundle: ContextBundle,
+        bundle: PromptBundle,
         user_message: str,
         character_decisions: List[Dict[str, Any]],
         addendum: Optional[str] = None,
@@ -399,9 +399,9 @@ class ChatPipeline:
         if addendum:
             story_prompt = f"{story_prompt}\n\n{addendum}"
 
-        self.logger.context(
+        self.logger.prompt(
             "FULL STORY PROMPT (what AI sees)",
-            "ai",
+            "prompt",
             {
                 "prompt_length": len(story_prompt),
                 "prompt_content": (
@@ -436,7 +436,7 @@ class ChatPipeline:
     @pipeline_stage_method("VALIDATION")
     async def validate(
         self,
-        bundle: ContextBundle,
+        bundle: PromptBundle,
         user_message: str,
         character_decisions: List[Dict[str, Any]],
         generated_text: str,
@@ -530,7 +530,7 @@ class ChatPipeline:
     async def _attempt_repair(
         self,
         *,
-        bundle: ContextBundle,
+        bundle: PromptBundle,
         user_message: str,
         character_decisions: List[Dict[str, Any]],
         original_text: str,
@@ -667,10 +667,10 @@ class ChatPipeline:
     # Helpers
     # ------------------------------------------------------------------
 
-    @pipeline_stage_method("CONTEXT")
+    @pipeline_stage_method("PROMPT_BUILD")
     def _gather_rich_characters_in_scene(self) -> List[Dict[str, Any]]:
         """Re-query characters after trigger_detection so simulation sees the post-change set."""
-        rich_characters = self.context_builder.get_all_characters_in_scene_info()
+        rich_characters = self.prompt_builder.get_all_characters_in_scene_info()
 
         self.logger.context(
             f"Characters in scene: {len(rich_characters)}",

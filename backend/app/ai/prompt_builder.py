@@ -1,17 +1,22 @@
 """
-ContextBuilder - assembles the per-turn ContextBundle that downstream
+PromptBuilder - assembles the per-turn PromptBundle that downstream
 pipeline stages and prompt templates consume.
 
+Vocabulary (R8): "prompt" / "bundle" means what we send to the LLM;
+"context" means in-world background (scene state, what a character
+knows, their goals). This module owns the prompt input.
+
 Post-R2 surface:
-- `build_bundle()` - typed ContextBundle (preferred path going forward).
-- `build_for_character(character_id)` - same bundle plus a populated
-  `target_character`. M2.3 will add witness-based filtering of memories,
-  knowledge and flags; for R2 it just attaches the character profile.
-- `build_full_context()` - DEPRECATED alias for backwards compat
+- `build_prompt_bundle()` - typed PromptBundle (preferred path going forward).
+- `build_prompt_bundle_for_character(character_id)` - same bundle plus a
+  populated `target_character`. M2.3 will add witness-based filtering of
+  memories, knowledge and flags; for R2 it just attaches the character
+  profile.
+- `build_prompt_string()` - DEPRECATED alias for backwards compat
   (admin/tester panel still calls it). Will be removed once M2.3 lands.
 
 The legacy concatenated string format lives in
-`pipeline/context_bundle.py:render_legacy_context()` and is byte-for-byte
+`pipeline/prompt_bundle.py:render_legacy_prompt()` and is byte-for-byte
 reproducible from the bundle, so the model sees the same input it did
 before R2.
 """
@@ -21,13 +26,13 @@ from sqlalchemy.orm import Session
 
 from .. import crud, models
 from ..config import settings
-from ..pipeline.context_bundle import (
+from ..pipeline.prompt_bundle import (
     ActiveArcView,
     CharacterPresenceView,
     CharacterView,
-    ContextBundle,
     ConversationMessageView,
     MemoryFlagView,
+    PromptBundle,
     RelationshipView,
     SceneView,
     StoryView,
@@ -35,8 +40,8 @@ from ..pipeline.context_bundle import (
 from ..utils.logger import AppLogger
 
 
-class ContextBuilder:
-    """Assembles ContextBundle objects from the playthrough's current state."""
+class PromptBuilder:
+    """Assembles PromptBundle objects from the playthrough's current state."""
 
     def __init__(self, db: Session, session_id: int):
         self.db = db
@@ -57,20 +62,20 @@ class ContextBuilder:
         if not self.story:
             raise ValueError(f"Story {self.playthrough.story_id} not found")
 
-        self.logger.context(
-            f"Context builder initialized for session {session_id}",
-            "memory",
+        self.logger.prompt(
+            f"Prompt builder initialized for session {session_id}",
+            "prompt",
         )
 
     # ------------------------------------------------------------------
-    # New public surface (R2+)
+    # New public surface (R2+, renamed in R8)
     # ------------------------------------------------------------------
 
-    def build_bundle(self) -> ContextBundle:
-        """Gather every piece of context the model and pipeline need this turn."""
-        self.logger.context("Building context bundle", "memory")
+    def build_prompt_bundle(self) -> PromptBundle:
+        """Gather every piece of input the prompt needs this turn."""
+        self.logger.prompt("Building prompt bundle", "prompt")
 
-        bundle = ContextBundle(
+        bundle = PromptBundle(
             story=self._collect_story(),
             scene=self._collect_scene(),
             characters_present=self._collect_characters_present(),
@@ -80,9 +85,9 @@ class ContextBuilder:
             memory_flags=self._collect_memory_flags(),
         )
 
-        self.logger.context(
-            "Built context bundle",
-            "memory",
+        self.logger.prompt(
+            "Built prompt bundle",
+            "prompt",
             {
                 "characters_present": len(bundle.characters_present),
                 "history_messages": len(bundle.history),
@@ -94,14 +99,14 @@ class ContextBuilder:
 
         return bundle
 
-    def build_for_character(self, character_id: int) -> ContextBundle:
+    def build_prompt_bundle_for_character(self, character_id: int) -> PromptBundle:
         """Bundle plus the requested character's full profile.
 
         R2 ships this without witness-based filtering — `CharacterMemory`,
         `CharacterKnowledge` and `MemoryFlag` are still global. M2.3 flips
         on filtering using the witness columns R6 adds.
         """
-        bundle = self.build_bundle()
+        bundle = self.build_prompt_bundle()
         bundle.target_character = self._build_character_view(character_id)
         return bundle
 
@@ -109,13 +114,13 @@ class ContextBuilder:
     # Deprecated string surface (kept for admin/tester until M2.3)
     # ------------------------------------------------------------------
 
-    def build_full_context(self) -> str:
-        """DEPRECATED. Use `build_bundle()`.
+    def build_prompt_string(self) -> str:
+        """DEPRECATED. Use `build_prompt_bundle()`.
 
         Renders the bundle through the legacy formatter so older callers
         (admin tester panel, etc.) keep getting the same string.
         """
-        return self.build_bundle().to_string()
+        return self.build_prompt_bundle().to_string()
 
     # ------------------------------------------------------------------
     # Pipeline-facing helpers that aren't part of the bundle
