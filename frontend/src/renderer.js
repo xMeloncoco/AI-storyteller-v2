@@ -416,8 +416,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Tester navigation buttons
-    document.getElementById('btn-tester-context').addEventListener('click', () => {
-        TesterComponent.showView('context');
+    document.getElementById('btn-tester-prompt').addEventListener('click', () => {
+        TesterComponent.showView('prompt');
     });
 
     document.getElementById('btn-tester-logs').addEventListener('click', () => {

@@ -1,15 +1,20 @@
 """
-ContextBundle - structured per-turn context, with a renderer for the
-legacy concatenated-string format.
+PromptBundle - structured per-turn input to the prompt, with a renderer
+for the legacy concatenated-string format.
 
-R2 introduces the typed bundle without changing what the model sees:
-`render_legacy_context(bundle)` reproduces the exact format the old
-ContextBuilder.build_full_context() emitted. The promise from
-REFACTOR_FIRST.md is byte-for-byte (or near) — assemble the prompt
-through this renderer until M2.x flips on per-character filtering.
+Vocabulary (R8): "prompt" / "bundle" means what we send to the LLM;
+"context" means the in-world background (the character's situation,
+what they know, their goals). This file owns the prompt input.
+
+R2 introduced the typed bundle without changing what the model sees:
+`render_legacy_prompt(bundle)` reproduces the exact format the pre-R2
+build_full_context() (now `PromptBuilder.build_prompt_string()`) used to
+emit. The promise from REFACTOR_FIRST.md is byte-for-byte (or near) —
+assemble the prompt through this renderer until M2.x flips on
+per-character filtering.
 
 `CharacterView` is the rich per-character block. M2.3 will populate
-`ContextBundle.target_character` and let prompt templates re-inject the
+`PromptBundle.target_character` and let prompt templates re-inject the
 character sheet at the top of every prompt that involves that character
 (killing drift). For R2 it's an unused slot.
 """
@@ -94,7 +99,7 @@ class CharacterView:
     every turn — drift starts when these dilute (P2.4 / M2.4).
 
     Slot is unused in R2; M2.3 will populate it via
-    `ContextBuilder.build_for_character()` plus witness filtering.
+    `PromptBuilder.build_prompt_bundle_for_character()` plus witness filtering.
     """
     id: int
     name: str
@@ -109,8 +114,8 @@ class CharacterView:
 
 
 @dataclass
-class ContextBundle:
-    """Everything CONTEXT_GATHERING produced for this turn."""
+class PromptBundle:
+    """Everything PROMPT_BUILD produced for this turn."""
     story: StoryView
     scene: SceneView
     characters_present: List[CharacterPresenceView] = field(default_factory=list)
@@ -121,8 +126,8 @@ class ContextBundle:
     target_character: Optional[CharacterView] = None
 
     def to_string(self) -> str:
-        """Convenience for the deprecated `build_full_context()` alias."""
-        return render_legacy_context(self)
+        """Convenience for the deprecated `build_prompt_string()` alias."""
+        return render_legacy_prompt(self)
 
 
 # ---------------------------------------------------------------------------
@@ -130,8 +135,9 @@ class ContextBundle:
 # ---------------------------------------------------------------------------
 
 
-def render_legacy_context(bundle: ContextBundle) -> str:
-    """Reproduce the string the old ContextBuilder.build_full_context() emitted.
+def render_legacy_prompt(bundle: PromptBundle) -> str:
+    """Reproduce the string pre-R2 build_full_context() (now
+    `PromptBuilder.build_prompt_string()`) emitted.
 
     Order, prefixes and trailing newlines are intentionally identical so the
     LLM input doesn't shift during R2.

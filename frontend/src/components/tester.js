@@ -75,8 +75,8 @@ const TesterComponent = {
 
         // Handle different views
         switch (viewType) {
-            case 'context':
-                await this.loadContextView();
+            case 'prompt':
+                await this.loadPromptView();
                 break;
             case 'logs':
                 await this.loadLogsView();
@@ -334,34 +334,34 @@ const TesterComponent = {
     },
 
     /**
-     * Load context window view
+     * Load prompt window view - shows exactly what the LLM would see.
      */
-    async loadContextView() {
+    async loadPromptView() {
         const container = document.getElementById('tester-view-container');
 
         if (!this.currentSession) {
             container.innerHTML = `
-                <p style="color: #fbbf24;">No active session. Start a chat to see the context window.</p>
+                <p style="color: #fbbf24;">No active session. Start a chat to see the prompt.</p>
             `;
             return;
         }
 
-        container.innerHTML = '<p>Loading context window...</p>';
+        container.innerHTML = '<p>Loading prompt...</p>';
 
         try {
-            const data = await getContextWindow(this.currentSession);
+            const data = await getPromptWindow(this.currentSession);
 
             let html = '<div class="tester-context-container">';
-            html += `<h4>AI Context Window (${data.context_length} characters)</h4>`;
-            html += `<pre class="context-display">${data.full_context}</pre>`;
+            html += `<h4>AI Prompt (${data.prompt_length} characters)</h4>`;
+            html += `<pre class="context-display">${data.full_prompt}</pre>`;
             html += '</div>';
 
             container.innerHTML = html;
 
         } catch (error) {
             const errorMsg = error.message || error.toString() || 'Unknown error occurred';
-            console.error('Error loading context:', error);
-            container.innerHTML = `<p style="color: #ef4444;">Error loading context: ${errorMsg}</p>`;
+            console.error('Error loading prompt:', error);
+            container.innerHTML = `<p style="color: #ef4444;">Error loading prompt: ${errorMsg}</p>`;
         }
     },
 

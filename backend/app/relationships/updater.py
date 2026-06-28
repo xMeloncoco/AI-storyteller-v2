@@ -14,7 +14,6 @@ from sqlalchemy.orm import Session
 from .. import crud, schemas
 from ..ai.llm_manager import LLMManager
 from ..ai.prompts import PromptTemplates
-from ..ai.context_builder import ContextBuilder
 from ..config import settings
 from ..utils.logger import AppLogger
 

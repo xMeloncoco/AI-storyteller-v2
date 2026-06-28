@@ -630,24 +630,25 @@ async def get_playthrough_data(playthrough_id: int, db: Session = Depends(get_db
         raise HTTPException(status_code=500, detail=f"Error getting playthrough data: {str(e)}")
 
 
-@router.get("/tester/context/{session_id}")
-async def get_context_window(session_id: int, db: Session = Depends(get_db)):
+@router.get("/tester/prompt/{session_id}")
+async def get_prompt_window(session_id: int, db: Session = Depends(get_db)):
     """
-    Get the current context window that would be sent to the AI
+    Get the current prompt input that would be sent to the AI.
 
-    This shows exactly what context the AI sees when generating responses
+    Shows exactly what the LLM sees when generating responses. Backs the
+    Tester panel's "Prompt" tab.
     """
     try:
-        from ..ai.context_builder import ContextBuilder
+        from ..ai.prompt_builder import PromptBuilder
 
         # Validate session exists
         session = db.query(models.Session).filter(models.Session.id == session_id).first()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Build context
-        context_builder = ContextBuilder(db, session_id)
-        full_context = context_builder.build_full_context()
+        # Build the prompt input (rendered string for display)
+        prompt_builder = PromptBuilder(db, session_id)
+        full_prompt = prompt_builder.build_prompt_string()
 
         # Get conversation history for this session
         conversations = db.query(models.Conversation).filter(
@@ -664,8 +665,8 @@ async def get_context_window(session_id: int, db: Session = Depends(get_db)):
 
         return {
             "session_id": session_id,
-            "full_context": full_context,
-            "context_length": len(full_context),
+            "full_prompt": full_prompt,
+            "prompt_length": len(full_prompt),
             "conversation_history": conversation_history,
             "metadata": {
                 "playthrough_id": session.playthrough_id,
@@ -676,8 +677,8 @@ async def get_context_window(session_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        log_error(db, f"Error getting context window: {str(e)}", "system")
-        raise HTTPException(status_code=500, detail=f"Error getting context window: {str(e)}")
+        log_error(db, f"Error getting prompt window: {str(e)}", "system")
+        raise HTTPException(status_code=500, detail=f"Error getting prompt window: {str(e)}")
 
 
 @router.delete("/tester/playthrough/{playthrough_id}/reset")

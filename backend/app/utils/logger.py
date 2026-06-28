@@ -237,6 +237,24 @@ class AppLogger:
         """
         return self._create_log("ai_decision", message, category, details)
 
+    def prompt(
+        self,
+        message: str,
+        category: Optional[str] = None,
+        details: Optional[Any] = None
+    ) -> Log:
+        """
+        Log prompt-build events (PROMPT_BUILD stage / what we sent to the LLM).
+
+        Vocabulary (R8): "prompt" = the LLM input. For in-world background
+        events (scene state, what a character knows, where they are), use
+        the existing log types/categories like "character" or "story".
+
+        Example:
+            logger.prompt("Built prompt bundle", "prompt", {"history_messages": 12})
+        """
+        return self._create_log("prompt", message, category, details)
+
     def context(
         self,
         message: str,
@@ -244,10 +262,11 @@ class AppLogger:
         details: Optional[Any] = None
     ) -> Log:
         """
-        Log context/memory related events
+        DEPRECATED (R8): use `prompt()` for prompt-build events.
 
-        Example:
-            logger.context("Retrieved relevant memories", "memory", {"count": 5})
+        Kept for one commit so existing call sites keep working. The log
+        type remains "context" here — no DB migration — so old logs and
+        new ones written through this alias stay queryable together.
         """
         return self._create_log("context", message, category, details)
 

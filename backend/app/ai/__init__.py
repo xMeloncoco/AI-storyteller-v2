@@ -1,7 +1,7 @@
 # AI Module
-# Contains LLM integration, prompt templates, and context building
+# Contains LLM integration, prompt templates, and prompt-bundle building.
 from .llm_manager import LLMManager
-from .context_builder import ContextBuilder
+from .prompt_builder import PromptBuilder
 from .prompts import PromptTemplates
 
-__all__ = ["LLMManager", "ContextBuilder", "PromptTemplates"]
+__all__ = ["LLMManager", "PromptBuilder", "PromptTemplates"]
