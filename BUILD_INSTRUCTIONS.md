@@ -131,11 +131,20 @@ Two model tiers:
 
 See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later step possible without breaking the whole.
 
-- [ ] **M0.1** Extract a `Pipeline` class with one method per stage. `chat.py:send_message` should be ~30 lines that just orchestrates `pipeline.run(user_message)`.
-- [ ] **M0.2** Split `ContextBuilder.build_full_context()` into named getters that return *typed dicts*, not concatenated strings. Add a `build_for_character(character_id)` entry point that the per‑character path will use later.
-- [ ] **M0.3** Add a `pipeline_stage` log helper that auto‑tags every log inside a `with stage("CONTEXT"):` block. Update existing log sites to use it.
-- [ ] **M0.4** Confirm the validator is wired and *actually blocks* (current code logs and continues). Add a config flag `VALIDATION_MODE=warn|block|repair` defaulting to `warn`, so future steps can flip it.
-- [ ] **M0.5** Move all magic numbers (token limits, context message counts, importance thresholds) into `config.py` with named constants. No more `[:10]` and `min_importance=7` scattered in code.
+- [x] **M0.1** Extract a `Pipeline` class with one method per stage. `chat.py:send_message` should be ~30 lines that just orchestrates `pipeline.run(user_message)`.
+  - 2026-06-28: `refactor(R1): extract ChatPipeline class` — `app.pipeline.ChatPipeline` owns every stage; `routers/chat.py` is now a thin shell.
+- [x] **M0.2** Split `ContextBuilder.build_full_context()` into named getters that return *typed dicts*, not concatenated strings. Add a `build_for_character(character_id)` entry point that the per‑character path will use later.
+  - 2026-06-28: `refactor(R2): typed ContextBundle with byte-for-byte legacy renderer` — typed `ContextBundle` in `pipeline/context_bundle.py`; `ContextBuilder.build_bundle()` and `build_for_character()` added; `build_full_context()` is now a deprecated alias.
+- [x] **M0.3** Add a `pipeline_stage` log helper that auto‑tags every log inside a `with stage("CONTEXT"):` block. Update existing log sites to use it.
+  - 2026-06-28: `refactor(R3): stage-tagged logging via pipeline_stage context manager` — contextvar-backed `pipeline_stage()` / `@pipeline_stage_method()` decorates every ChatPipeline method; `AppLogger` auto-injects `details["stage"]`; tester logs panel filters on it.
+- [x] **M0.4** Confirm the validator is wired and *actually blocks* (current code logs and continues). Add a config flag `VALIDATION_MODE=warn|block|repair` defaulting to `warn`, so future steps can flip it.
+  - 2026-06-28: `refactor(R4): wire VALIDATION_MODE so the validator can actually block/repair` — `settings.validation_mode` (warn|block|repair, default warn). `repair` regenerates once with an addendum on `controls_user`, re-validates, falls back to original on `validation.unrepairable`. M3 expands repair strategies.
+- [x] **M0.5** Move all magic numbers (token limits, context message counts, importance thresholds) into `config.py` with named constants. No more `[:10]` and `min_importance=7` scattered in code.
+  - 2026-06-28: `refactor(R5): lift tuning literals into config.py with trade-off comments` — seven new settings (`memory_flag_min_importance`, `memory_flag_top_n`, `max_dialogue_words`, `relationship_update_temperature`, `relationship_min_change`, `story_flag_analysis_temperature`, `generate_more_max_tokens`), each with a trade-off comment.
+
+> **Pre-work also done (no matching M0 box):**
+> - 2026-06-28: `refactor(R6): add witness/told_to columns and idempotent backfill migration` — stages the schema for M2.x per-character knowledge filtering. CRUD reads still ignore the columns; M2.3 will turn on filtering.
+> - 2026-06-28: R7 sanity sweep — `FILE_MAP.md` updated for `pipeline/` and `migrations.py`; static check confirmed no `except: pass`. `start-test.sh` runtime verification is the last gate before deleting `REFACTOR_FIRST.md`.
 
 ---
 

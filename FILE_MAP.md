@@ -13,7 +13,7 @@ This map covers the parts a beginner programmer is most likely to touch. Generat
 |---|---|
 | `BUILD_INSTRUCTIONS.md` | **Master doc**. Principles + ordered build checklist. Read every time. |
 | `FILE_MAP.md` | This file. Where things live. |
-| `REFACTOR_FIRST.md` | Cleanup steps to run before adding new features on top of the current code. |
+| `REFACTOR_FIRST.md` | Cleanup steps to run before adding new features on top of the current code. R1–R6 done; delete after the R7 sanity run on `start-test.sh`. |
 | `README.md` | User-facing intro, quick start, project structure overview. |
 | `AI_SETUP.md` | How to configure Ollama / OpenRouter / Nebius. End-user setup guide. |
 | `TESTING.md` | How to run `start-test.sh` / `start-test.bat` for local testing. |
@@ -29,10 +29,13 @@ This map covers the parts a beginner programmer is most likely to touch. Generat
 FastAPI app entry. Lifespan startup/shutdown, CORS, global exception handler, root endpoints (`/`, `/health`, `/info`, `/stats`), dev `/reset-database`. Mounts the routers from `routers/`. **Don't put business logic here.**
 
 ### `backend/app/config.py`
-Settings via `pydantic-settings`. AI provider, model names, token limits, DB URL, context window size, logging level. All env-overrideable. **Magic numbers belong here, not in code.** (M0.5 will enforce this.)
+Settings via `pydantic-settings`. AI provider, model names, token limits, DB URL, context window size, logging level. All env-overrideable. **Magic numbers belong here, not in code.** Stage-tuning knobs live here too: `validation_mode` (R4), `memory_flag_min_importance` / `memory_flag_top_n` / `max_dialogue_words` / `relationship_update_temperature` / `relationship_min_change` / `story_flag_analysis_temperature` / `generate_more_max_tokens` (R5). Each setting has a comment explaining the trade-off when you raise/lower it.
 
 ### `backend/app/database.py`
-SQLAlchemy engine + `SessionLocal` + `Base` + `init_db()` + `get_db()` dependency. Nothing else.
+SQLAlchemy engine + `SessionLocal` + `Base` + `init_db()` + `get_db()` dependency. `init_db()` calls `app.migrations.apply_startup_migrations(engine)` after `create_all` so column-level migrations land before the API takes traffic.
+
+### `backend/app/migrations.py`
+Lightweight idempotent startup migrations. R6 introduced this for the `witnesses` / `told_to` columns on `MemoryFlag`, `CharacterMemory`, `CharacterKnowledge`: `PRAGMA table_info` guards each `ALTER TABLE`, and `WHERE witnesses IS NULL` keeps the backfill from re-touching rows. **Add new lightweight schema changes here as their own function and call it from `apply_startup_migrations()`.** Anything bigger graduates to Alembic.
 
 ### `backend/app/models.py`
 Every ORM table. Key models (in current state):
@@ -58,16 +61,24 @@ Per-stage spec: purpose, tasks, AI model, tables touched, code location. **Refer
 ### `backend/app/ai/` — model interaction
 
 - `ai/llm_manager.py` — `LLMManager`: provider routing (`openrouter` / `nebius` / `local` Ollama / `demo`), `generate_text(...)`, `analyze_character_decision(...)`, `detect_scene_changes(...)`. Demo mode returns mock JSON for offline UI testing. **All LLM calls go through here.** Don't call providers directly elsewhere.
-- `ai/prompts.py` — `PromptTemplates`: every prompt is a static method here. **Editing a prompt only ever means editing this file.** Currently holds: `story_generation_prompt`, `character_decision_prompt`, `scene_change_detection_prompt`, `generate_more_prompt`, others.
-- `ai/context_builder.py` — `ContextBuilder`: assembles the context string sent to GENERATION. Currently returns one big string (M0.2 / M2.3 will refactor to per-character typed dicts). Pulls story/scene/characters/history/relationships/arcs/flags.
-- `ai/validator.py` — `ContentValidator`: regex checks for user-character control, dialogue repetition, contradictions, character-decision consistency. Currently only logs issues. (M3 will give it teeth.)
+- `ai/prompts.py` — `PromptTemplates`: every prompt is a static method here. **Editing a prompt only ever means editing this file.** `story_generation_prompt` now accepts a typed `ContextBundle` (R2) and renders the context section itself — single source of truth for what the model sees. Also holds `character_decision_prompt`, `scene_change_detection_prompt`, `generate_more_prompt`, others.
+- `ai/context_builder.py` — `ContextBuilder`: assembles the typed `ContextBundle` (R2). Public surface: `build_bundle()` returns the structured bundle, `build_for_character(character_id)` attaches the full character profile (M2.3 will add witness filtering). `build_full_context()` is a deprecated alias returning `build_bundle().to_string()` — kept for the admin tester panel; remove when M2.3 lands. Rich-character helpers (`get_character_info`, `get_all_characters_in_scene_info`) stay for simulation/response shaping.
+- `ai/validator.py` — `ContentValidator`: regex checks for user-character control, dialogue repetition, contradictions, character-decision consistency. Still pure regex; the *behavior* (warn vs block vs repair) is now decided in `ChatPipeline.validate` via `settings.validation_mode` (R4). M3 will swap the regex critic for an AI critic and expand the repair strategies.
 
 ### `backend/app/routers/` — HTTP endpoints
 
-- `routers/chat.py` — `POST /chat/send` (the main pipeline orchestrator today — see M0.1 to extract), `POST /chat/generate-more`, `GET /chat/history/{session_id}`, `GET /chat/playthrough-history/{playthrough_id}`.
+- `routers/chat.py` — thin HTTP shell. `POST /chat/send` and `POST /chat/generate-more` parse the request, instantiate `app.pipeline.ChatPipeline`, await it and return the response (R1). `GET /chat/history/{session_id}`, `GET /chat/playthrough-history/{playthrough_id}` are unchanged. **Don't put pipeline logic here — it belongs in `pipeline/chat_pipeline.py`.**
 - `routers/stories.py` — story + playthrough listing/creation.
-- `routers/admin.py` — Tester panel backend: load test data, view full playthrough, view context window, view grouped logs, reset playthrough.
+- `routers/admin.py` — Tester panel backend: load test data, view full playthrough, view context window (still calls the deprecated `build_full_context()` alias), view grouped logs, reset playthrough.
 - `routers/logs.py` — log queries for the log viewer.
+
+### `backend/app/pipeline/` — per-turn pipeline (R1+)
+
+The pipeline owns every stage from PIPELINE_STAGES.md. `chat.py` calls `ChatPipeline.run(message)` / `ChatPipeline.generate_more()` and shapes the response; everything else (logs, DB writes, LLM calls, validation, downstream side-effects) lives here.
+
+- `pipeline/chat_pipeline.py` — `ChatPipeline(db, session_id)`. One method per stage: `intake`, `context_gather`, `trigger_detection`, `scene_simulation`, `generate(addendum=...)`, `validate` (warn/block/repair from `settings.validation_mode`, R4), `present`, `state_update`. Each method is wrapped with `@pipeline_stage_method(...)` so logs auto-tag the stage (R3). Dataclasses for intermediate results (`IntakeResult`, `TriggerResult`, `ValidationResult`, `StateUpdateSummary`).
+- `pipeline/context_bundle.py` — typed `ContextBundle` (R2) plus the views (`StoryView`, `SceneView`, `CharacterPresenceView`, `ConversationMessageView`, `RelationshipView`, `ActiveArcView`, `MemoryFlagView`, `CharacterView`). `render_legacy_context(bundle)` reproduces the prior `build_full_context()` string byte-for-byte so the model input doesn't drift. **Pure data + a renderer — no DB / LLM imports here**, which is what lets prompts.py import the bundle without circular deps.
+- `pipeline/__init__.py` — exposes `ChatPipeline` lazily via `__getattr__` so `pipeline.context_bundle` can be imported in isolation (e.g. by `ai/prompts.py`) without dragging FastAPI / SQLAlchemy in through `chat_pipeline`.
 
 ### `backend/app/relationships/updater.py`
 `RelationshipUpdater.update_relationships_from_interaction(...)` — runs after generation, uses a small-model call to estimate trust/affection/familiarity deltas and writes them to `Relationship`. **Adjust deltas conservatively; runaway relationships break stories.**
@@ -76,7 +87,7 @@ Per-stage spec: purpose, tasks, AI model, tables touched, code location. **Refer
 `StoryProgressionManager.check_progression(...)` — checks arc/episode/flag conditions after generation, sets flags, activates/completes arcs.
 
 ### `backend/app/utils/logger.py`
-`AppLogger` (session-scoped) + module-level `log_notification` / `log_error` / `log_edit` etc. Writes to the `logs` table AND prints to console. **Use `AppLogger` when inside a stage; use module-level helpers when you don't have a session yet.** (M0.3 adds a stage-aware context manager.)
+`AppLogger` (session-scoped) + module-level `log_notification` / `log_error` / `log_edit` etc. Writes to the `logs` table AND prints to console. **Use `AppLogger` when inside a stage; use module-level helpers when you don't have a session yet.** R3 added a `pipeline_stage("STAGE")` context manager + `pipeline_stage_method("STAGE")` decorator (contextvar-backed so async propagates correctly). When active, `_create_log` auto-injects `details["stage"]` and the printed line gets a `[STAGE:NAME]` prefix; the tester logs panel filters on the same field.
 
 ### `backend/test_data/`
 JSON story templates loaded by the admin `load-test-data` endpoint. `TEMPLATE_story.json` is the canonical shape; `moonweaver_story.json`, `sterling_story.json`, `starling_contract_story.json` are example stories. **New story JSON goes here.**
