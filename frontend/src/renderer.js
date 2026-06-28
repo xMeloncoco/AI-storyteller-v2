@@ -465,6 +465,11 @@ document.addEventListener('DOMContentLoaded', () => {
         TesterComponent.resetCurrentPlaythrough();
     });
 
+    // Tester export-fixture button
+    document.getElementById('btn-tester-export').addEventListener('click', () => {
+        TesterComponent.exportCurrentPlaythrough();
+    });
+
     // Modals
     document.getElementById('btn-close-characters').addEventListener('click', () => {
         document.getElementById('modal-characters').classList.remove('active');

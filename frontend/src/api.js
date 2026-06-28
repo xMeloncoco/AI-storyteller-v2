@@ -369,6 +369,18 @@ async function deleteAllStoriesAndPlaythroughs() {
     return apiRequest('/admin/all', { method: 'DELETE' });
 }
 
+/**
+ * Export a playthrough as a JSON fixture into backend/test_data/.
+ * @param {number} playthroughId
+ * @param {string} [filename] - optional override; auto-generated from titles otherwise
+ * @returns {Promise<Object>}
+ */
+async function exportPlaythrough(playthroughId, filename = null) {
+    let endpoint = `/admin/playthroughs/${playthroughId}/export`;
+    if (filename) endpoint += `?filename=${encodeURIComponent(filename)}`;
+    return apiRequest(endpoint, { method: 'POST' });
+}
+
 // =============================================================================
 // Tester / Debug Functions
 // =============================================================================
