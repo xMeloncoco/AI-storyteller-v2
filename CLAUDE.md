@@ -11,3 +11,5 @@ When a suggested or requested change has meaningful impact on behavior, architec
 5. Implement once aligned
 
 This applies to any change significant enough to affect how the app works, is structured, or behaves over time. Skip the analysis step for minor visual/cosmetic changes.
+
+Always take the build instructions file into account when analyzing or implementing changes.
