@@ -565,6 +565,40 @@ const TesterComponent = {
             console.error('Error resetting playthrough:', error);
             statusContainer.innerHTML = `<p style="color: #ef4444;">Error: ${errorMsg}</p>`;
         }
+    },
+
+    /**
+     * Export the current playthrough as a JSON fixture into backend/test_data/.
+     */
+    async exportCurrentPlaythrough() {
+        if (!this.currentPlaythrough) return;
+
+        const btn = document.getElementById('btn-tester-export');
+        const statusContainer = document.getElementById('tester-export-status');
+
+        btn.disabled = true;
+        const originalLabel = btn.textContent;
+        btn.textContent = 'Exporting…';
+        statusContainer.innerHTML = `<span style="color: #3b82f6;">Exporting playthrough…</span>`;
+
+        try {
+            const result = await exportPlaythrough(this.currentPlaythrough);
+
+            const s = result.summary || {};
+            statusContainer.innerHTML =
+                `<div style="color: #10b981;"><strong>Saved:</strong> ${result.filename}</div>` +
+                `<div style="color: #9ca3af;">${s.sessions ?? 0} session(s), ` +
+                `${s.conversations ?? 0} message(s), ` +
+                `${s.playthrough_characters ?? 0} character instance(s)</div>`;
+
+        } catch (error) {
+            const errorMsg = error.message || error.toString() || 'Unknown error occurred';
+            console.error('Error exporting playthrough:', error);
+            statusContainer.innerHTML = `<span style="color: #ef4444;">Error: ${errorMsg}</span>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalLabel;
+        }
     }
 };
 

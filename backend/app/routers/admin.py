@@ -10,7 +10,9 @@ from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pathlib import Path
 from typing import List, Optional
+from datetime import datetime, date
 import json
+import re
 
 from ..database import get_db
 from .. import models, schemas
@@ -570,6 +572,256 @@ async def delete_all_stories_and_playthroughs(db: Session = Depends(get_db)):
         db.rollback()
         log_error(db, f"Error deleting all data: {str(e)}", "database")
         raise HTTPException(status_code=500, detail=f"Error deleting all data: {str(e)}")
+
+
+# =============================================================================
+# PLAYTHROUGH EXPORT (fixture authoring)
+# =============================================================================
+
+EXPORT_FORMAT_VERSION = 1
+
+
+def _row_to_dict(row, exclude: Optional[set] = None) -> dict:
+    """Serialize a SQLAlchemy row by introspecting its columns. Datetimes go to
+    ISO strings; everything else is left as-is."""
+    exclude = exclude or set()
+    out = {}
+    for col in row.__table__.columns:
+        if col.name in exclude:
+            continue
+        value = getattr(row, col.name)
+        if isinstance(value, (datetime, date)):
+            value = value.isoformat()
+        out[col.name] = value
+    return out
+
+
+def _safe_filename(text: str) -> str:
+    """Turn a playthrough name into a filesystem-safe filename slug."""
+    slug = re.sub(r"[^A-Za-z0-9_-]+", "_", text or "playthrough").strip("_")
+    return slug.lower() or "playthrough"
+
+
+def _export_playthrough(db: Session, playthrough_id: int) -> dict:
+    """Build the full fixture dict for a playthrough.
+
+    Includes the story + every template row (characters/relationships/
+    locations/story_arcs/episodes with playthrough_id IS NULL) plus the
+    playthrough itself with every playthrough-scoped row and every session's
+    conversations, scene_states, and scene_characters.
+
+    Character references in playthrough-scoped tables get a sidecar
+    `_character_name` so the future loader can remap IDs without depending
+    on the export's original primary keys.
+    """
+    playthrough = db.query(models.Playthrough).filter(
+        models.Playthrough.id == playthrough_id
+    ).first()
+    if not playthrough:
+        raise HTTPException(status_code=404, detail="Playthrough not found")
+
+    story = db.query(models.Story).filter(models.Story.id == playthrough.story_id).first()
+    if not story:
+        raise HTTPException(status_code=500, detail="Story for playthrough is missing")
+
+    story_id = story.id
+
+    char_name_by_id: dict[int, str] = {
+        cid: name for (cid, name) in db.query(
+            models.Character.id, models.Character.character_name
+        ).filter(models.Character.story_id == story_id).all()
+    }
+    loc_name_by_id: dict[int, str] = {
+        lid: name for (lid, name) in db.query(
+            models.Location.id, models.Location.location_name
+        ).filter(models.Location.story_id == story_id).all()
+    }
+
+    def name_for_character(cid):
+        return char_name_by_id.get(cid) if cid is not None else None
+
+    def name_for_location(lid):
+        return loc_name_by_id.get(lid) if lid is not None else None
+
+    def by_story_template(model):
+        return db.query(model).filter(
+            model.story_id == story_id,
+            model.playthrough_id.is_(None)
+        ).all()
+
+    def by_playthrough(model):
+        return db.query(model).filter(
+            model.playthrough_id == playthrough_id
+        ).all()
+
+    def story_episodes_template():
+        # StoryEpisode is attached via arc_id, not story_id directly.
+        return db.query(models.StoryEpisode).join(
+            models.StoryArc, models.StoryEpisode.arc_id == models.StoryArc.id
+        ).filter(
+            models.StoryArc.story_id == story_id,
+            models.StoryEpisode.playthrough_id.is_(None)
+        ).all()
+
+    def dump_character(c):
+        d = _row_to_dict(c)
+        if c.template_character_id is not None:
+            d["_template_character_name"] = name_for_character(c.template_character_id)
+        return d
+
+    def dump_relationship(r):
+        d = _row_to_dict(r)
+        d["_entity1_name"] = name_for_character(r.entity1_id)
+        d["_entity2_name"] = name_for_character(r.entity2_id)
+        return d
+
+    def dump_with_character_name(row):
+        d = _row_to_dict(row)
+        d["_character_name"] = name_for_character(getattr(row, "character_id", None))
+        return d
+
+    def dump_memory(m):
+        d = _row_to_dict(m)
+        d["_character_name"] = name_for_character(getattr(m, "character_id", None))
+        if getattr(m, "location_id", None) is not None:
+            d["_location_name"] = name_for_location(m.location_id)
+        return d
+
+    def dump_episode(e):
+        d = _row_to_dict(e)
+        arc = db.query(models.StoryArc).filter(models.StoryArc.id == e.arc_id).first()
+        d["_arc_name"] = arc.arc_name if arc else None
+        return d
+
+    # Story templates (playthrough_id IS NULL for the relevant tables)
+    templates = {
+        "characters": [dump_character(c) for c in by_story_template(models.Character)],
+        "locations": [_row_to_dict(l) for l in by_story_template(models.Location)],
+        "relationships": [dump_relationship(r) for r in by_story_template(models.Relationship)],
+        "story_arcs": [_row_to_dict(a) for a in by_story_template(models.StoryArc)],
+        "story_episodes": [dump_episode(e) for e in story_episodes_template()],
+    }
+
+    # Playthrough-scoped state
+    playthrough_data = _row_to_dict(playthrough)
+    playthrough_data.update({
+        "characters": [dump_character(c) for c in by_playthrough(models.Character)],
+        "locations": [_row_to_dict(l) for l in by_playthrough(models.Location)],
+        "relationships": [dump_relationship(r) for r in by_playthrough(models.Relationship)],
+        "story_arcs": [_row_to_dict(a) for a in by_playthrough(models.StoryArc)],
+        "story_episodes": [dump_episode(e) for e in by_playthrough(models.StoryEpisode)],
+        "story_flags": [_row_to_dict(f) for f in by_playthrough(models.StoryFlag)],
+        "memory_flags": [_row_to_dict(m) for m in by_playthrough(models.MemoryFlag)],
+        "character_knowledge": [dump_with_character_name(k) for k in by_playthrough(models.CharacterKnowledge)],
+        "character_states": [dump_with_character_name(s) for s in by_playthrough(models.CharacterState)],
+        "character_goals": [dump_with_character_name(g) for g in by_playthrough(models.CharacterGoal)],
+        "character_memories": [dump_memory(m) for m in by_playthrough(models.CharacterMemory)],
+        "character_beliefs": [dump_with_character_name(b) for b in by_playthrough(models.CharacterBelief)],
+        "character_avoidances": [dump_with_character_name(a) for a in by_playthrough(models.CharacterAvoidance)],
+        "sessions": [],
+    })
+
+    sessions = db.query(models.Session).filter(
+        models.Session.playthrough_id == playthrough_id
+    ).order_by(models.Session.started_at).all()
+
+    for session in sessions:
+        session_dict = _row_to_dict(session)
+        session_dict["_user_character_name"] = name_for_character(session.user_character_id)
+
+        session_dict["conversations"] = [
+            _row_to_dict(c) for c in db.query(models.Conversation).filter(
+                models.Conversation.session_id == session.id
+            ).order_by(models.Conversation.timestamp).all()
+        ]
+
+        scene_states_rows = db.query(models.SceneState).filter(
+            models.SceneState.session_id == session.id
+        ).order_by(models.SceneState.created_at).all()
+
+        scene_states_out = []
+        for scene in scene_states_rows:
+            scene_dict = _row_to_dict(scene)
+            scene_dict["characters_in_scene"] = [
+                dump_with_character_name(sc) for sc in db.query(models.SceneCharacter).filter(
+                    models.SceneCharacter.scene_state_id == scene.id
+                ).all()
+            ]
+            scene_states_out.append(scene_dict)
+
+        session_dict["scene_states"] = scene_states_out
+        playthrough_data["sessions"].append(session_dict)
+
+    return {
+        "format_version": EXPORT_FORMAT_VERSION,
+        "kind": "playthrough_fixture",
+        "exported_at": datetime.utcnow().isoformat() + "Z",
+        "title": story.title,
+        "description": story.description,
+        "story": _row_to_dict(story),
+        "templates": templates,
+        "playthrough": playthrough_data,
+    }
+
+
+@router.get("/playthroughs/{playthrough_id}/export")
+async def preview_playthrough_export(playthrough_id: int, db: Session = Depends(get_db)):
+    """Return the export JSON without writing to disk (for inspection)."""
+    return _export_playthrough(db, playthrough_id)
+
+
+@router.post("/playthroughs/{playthrough_id}/export")
+async def export_playthrough_to_file(
+    playthrough_id: int,
+    filename: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Export a playthrough to a JSON file in backend/test_data/.
+
+    If `filename` is not supplied, one is generated from the story title
+    and playthrough name. Existing files are overwritten.
+    """
+    try:
+        data = _export_playthrough(db, playthrough_id)
+
+        test_data_dir = Path(__file__).parent.parent.parent / "test_data"
+        test_data_dir.mkdir(parents=True, exist_ok=True)
+
+        if not filename:
+            slug = f"{_safe_filename(data['title'])}__{_safe_filename(data['playthrough'].get('playthrough_name', ''))}.json"
+            filename = slug
+        elif not filename.endswith(".json"):
+            filename = f"{filename}.json"
+
+        out_path = test_data_dir / filename
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        log_notification(
+            db,
+            f"Exported playthrough {playthrough_id} to {filename}",
+            "database",
+            {"playthrough_id": playthrough_id, "filename": filename}
+        )
+
+        return {
+            "status": "success",
+            "filename": filename,
+            "path": str(out_path),
+            "bytes": out_path.stat().st_size,
+            "summary": {
+                "templates": {k: len(v) for k, v in data["templates"].items()},
+                "playthrough_characters": len(data["playthrough"]["characters"]),
+                "sessions": len(data["playthrough"]["sessions"]),
+                "conversations": sum(len(s["conversations"]) for s in data["playthrough"]["sessions"]),
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log_error(db, f"Error exporting playthrough: {str(e)}", "database")
+        raise HTTPException(status_code=500, detail=f"Error exporting playthrough: {str(e)}")
 
 
 # =============================================================================
