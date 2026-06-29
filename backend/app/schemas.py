@@ -56,9 +56,10 @@ class PlaythroughBase(BaseModel):
     playthrough_name: str
 
 
-class PlaythroughCreate(PlaythroughBase):
+class PlaythroughCreate(BaseModel):
     """Schema for creating a new playthrough"""
-    pass
+    story_id: int
+    playthrough_name: Optional[str] = None
 
 
 class PlaythroughResponse(PlaythroughBase):

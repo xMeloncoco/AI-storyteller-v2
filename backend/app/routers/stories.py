@@ -125,6 +125,10 @@ async def create_playthrough(
     if not story:
         raise HTTPException(status_code=404, detail="Story not found")
 
+    if not playthrough.playthrough_name:
+        count = len(crud.get_playthroughs_for_story(db, playthrough.story_id))
+        playthrough.playthrough_name = f"Playthrough #{count + 1}"
+
     db_playthrough = crud.create_playthrough(db, playthrough)
 
     log_notification(

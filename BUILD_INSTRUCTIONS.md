@@ -153,6 +153,14 @@ See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later 
 
 ### M1 — Structured input parsing (kills problem #1 and #8)
 
+> **Prompt-side down-payment done early (2026-06-28):** `story_generation_prompt` now
+> instructs the model on the speech/action/thought convention (quotes = spoken; outside
+> quotes = action or thought; ambiguous → treat as thought), ported from storyteller_v3's
+> prompt before it was deleted (see `V3_SALVAGE.md` P-A, `docs/V3_REFERENCE.md`). This is
+> only the *prompt* half — M1.1–M1.6 below are the *backend* half that actually parses and
+> persists those fields and enforces them in code. The prompt asking nicely is not the fix;
+> these boxes are.
+
 - [ ] **M1.1** Define an `IntakeMessage` schema: `{speech: str|None, action: str|None, thought: str|None, raw: str}`. Treat `thought` as private — never surfaced to NPCs.
 - [ ] **M1.2** Frontend: chat input has three optional modes. Default is `speech`. Users can prefix `*action*`, `(thought)`, or use a mode toggle. Document the syntax in‑app.
 - [ ] **M1.3** Backend INTAKE stage parses raw input into `IntakeMessage`. Small‑model fallback parser for ambiguous input.
@@ -168,6 +176,7 @@ See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later 
 - [ ] **M2.2** STATE_UPDATE: when storing a new memory/flag, **always** compute and store witnesses from the current `scene_characters` list. Never write a fact without witnesses.
 - [ ] **M2.3** PROMPT_BUILD: replace the single `build_prompt_string()` with `build_prompt_bundle_for_character(char_id)` that filters `CharacterMemory`, `CharacterKnowledge`, `MemoryFlag` and (later) ChromaDB results to those where the character is a witness or was told. Remove the deprecated `build_prompt_string` once this lands.
 - [ ] **M2.4** Re‑inject the **character sheet** (values, fears, would_never_do, would_always_do, decision_style, verbal_patterns, current_emotional_state, top 3 goals, internal_contradiction) at the top of every prompt that involves that character. Drift starts when these dilute.
+  - **Reference:** `docs/V3_REFERENCE.md §2` (salvaged from v3) — render **main** characters with a full sheet and **side** characters with a compact block (token budget), and consider adding `example_correct`/`example_incorrect` voice-anchor fields to the character model to make drift concrete for the model.
 - [ ] **M2.5** Add a logger line per character per turn: `"Character X sees N memories, M knowledge items, K flags"` — so it's obvious from logs when retrieval is empty.
 
 ---
@@ -195,6 +204,7 @@ See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later 
 
 - [ ] **M5.1** Add a `StoryDirector` module. On each turn, it sees: open arcs, unresolved conflicts, time since last tension beat, NPC goals.
 - [ ] **M5.2** Director emits a `directorial_pressure` object: `{escalate: bool, who_acts: char_id|null, what_pressure: text, why: text}`. This is *injected into the generation prompt*, not the validator.
+  - **Reference:** `docs/V3_REFERENCE.md §1` (salvaged from v3) — if this pressure object ever comes back *from the model* as structured output, the brace-counting parser there handles braces/quotes inside values with a salvage fallback. (We chose to compute pressure in code, not parse it out — so this is a fallback reference only.)
 - [ ] **M5.3** NPC agendas: each NPC's top active goal is **pushed forward at least slightly** each turn unless blocked. Log when an NPC takes a goal step.
 - [ ] **M5.4** Tension meter: a single 0–1 float per playthrough, updated by STATE_UPDATE. Director uses it to decide whether to inject a complication.
 
@@ -218,6 +228,12 @@ See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later 
 ---
 
 ### M8 — Goal‑driven NPC simulation
+
+> **Reference:** `docs/V3_REFERENCE.md §1` (salvaged from v3) holds v3's per-NPC
+> `background_context({character, intention, will_act, mood})` convention and its output
+> parser. v3 merged intent into the generation output; v2 keeps the **separate decision
+> call** (see `DIRECTION.md` for why). Use the reference for the *intent fields* (esp.
+> `will_act` → skip silent NPCs) and the parser, not for the merged-output approach.
 
 - [ ] **M8.1** SCENE_SIMULATION (per NPC, parallelizable): use `character_goals` + current state + relationships to decide an *intent* this turn. Store on `SceneCharacter`.
 - [ ] **M8.2** Generation prompt receives each NPC's intent (terse, 1 line). NPCs act on intents; they don't all need to speak.

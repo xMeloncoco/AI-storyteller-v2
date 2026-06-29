@@ -96,6 +96,31 @@ async function setValidationMode(mode) {
     });
 }
 
+// ----- AI model configuration (per-task provider/model) -----
+
+async function getModelConfig() {
+    return apiRequest('/admin/models/config');
+}
+
+async function setTaskModel(task, { provider, model, maxTokens } = {}) {
+    const body = { task };
+    if (provider !== undefined) body.provider = provider;
+    if (model !== undefined) body.model = model;
+    if (maxTokens !== undefined) body.max_tokens = maxTokens;
+    return apiRequest('/admin/models/config', {
+        method: 'PATCH',
+        body: JSON.stringify(body)
+    });
+}
+
+async function testModels() {
+    return apiRequest('/admin/models/test', { method: 'POST' });
+}
+
+async function getOllamaTags() {
+    return apiRequest('/admin/models/ollama-tags');
+}
+
 // =============================================================================
 // Stories
 // =============================================================================
@@ -145,12 +170,11 @@ async function getPlaythrough(playthroughId) {
  * @param {string} name - Playthrough name
  * @returns {Promise<Object>} Created playthrough
  */
-async function createPlaythrough(storyId, name) {
+async function createPlaythrough(storyId) {
     return apiRequest('/stories/playthroughs', {
         method: 'POST',
         body: JSON.stringify({
-            story_id: storyId,
-            playthrough_name: name
+            story_id: storyId
         })
     });
 }

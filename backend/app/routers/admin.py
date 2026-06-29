@@ -19,6 +19,17 @@ from ..database import get_db
 from .. import models, schemas
 from ..config import settings
 from ..utils.logger import log_notification, log_error
+from ..ai.model_config import (
+    model_registry,
+    provider_status,
+    provider_connection,
+    TASKS,
+    TASK_LABELS,
+    PROVIDER_TYPES,
+)
+from ..ai.llm_manager import probe_task
+
+import httpx
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -37,14 +48,101 @@ async def get_validation_mode():
 
 
 @router.patch("/validation-mode")
-async def set_validation_mode(body: dict):
+async def set_validation_mode(body: dict, db: Session = Depends(get_db)):
     """Change the runtime validation mode (warn / block / repair)."""
     mode = body.get("validation_mode", "")
     if mode not in VALID_MODES:
         raise HTTPException(status_code=422, detail=f"Invalid mode '{mode}'. Must be one of: {sorted(VALID_MODES)}")
     settings.validation_mode = mode
-    log_notification("validation.mode_changed", f"Validation mode set to: {mode}")
+    log_notification(db, f"Validation mode set to: {mode}", "system")
     return {"validation_mode": settings.validation_mode}
+
+
+# =============================================================================
+# AI MODEL CONFIGURATION (per-task provider/model assignment)
+# =============================================================================
+
+
+@router.get("/models/config")
+async def get_models_config():
+    """Return per-task model assignments plus available providers."""
+    return {
+        "tasks": [
+            {"task": t, "label": TASK_LABELS.get(t, t), **model_registry.get_task(t)}
+            for t in TASKS
+        ],
+        "providers": provider_status(),
+    }
+
+
+@router.patch("/models/config")
+async def set_model_config(body: dict, db: Session = Depends(get_db)):
+    """Update one task's provider/model/max_tokens assignment."""
+    task = body.get("task")
+    if task not in TASKS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown task '{task}'. Must be one of: {TASKS}",
+        )
+
+    provider = body.get("provider")
+    if provider is not None and provider not in PROVIDER_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown provider '{provider}'. Must be one of: {sorted(PROVIDER_TYPES)}",
+        )
+
+    max_tokens = body.get("max_tokens")
+    if max_tokens is not None:
+        try:
+            max_tokens = int(max_tokens)
+            if max_tokens <= 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=422, detail="max_tokens must be a positive integer")
+
+    cfg = model_registry.set_task(
+        task,
+        provider=provider,
+        model=body.get("model"),
+        max_tokens=max_tokens,
+    )
+    log_notification(db, f"Task '{task}' set to {cfg['provider']}/{cfg['model']}", "system")
+    return {"task": task, "label": TASK_LABELS.get(task, task), **cfg}
+
+
+@router.post("/models/test")
+async def test_models(db: Session = Depends(get_db)):
+    """
+    Test each task's assigned provider/model with a tiny prompt.
+
+    Tasks sharing the same (provider, model) are probed once and the result is
+    reused, so this fires at most one request per distinct model.
+    """
+    results = {}
+    seen = {}
+    for task in TASKS:
+        cfg = model_registry.get_task(task)
+        key = (cfg["provider"], cfg["model"])
+        if key not in seen:
+            seen[key] = await probe_task(db, task)
+        results[task] = {"label": TASK_LABELS.get(task, task), **seen[key]}
+    return {"results": results}
+
+
+@router.get("/models/ollama-tags")
+async def get_ollama_tags():
+    """List models available in the local Ollama install (best-effort)."""
+    conn = provider_connection("ollama")
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(f"{conn['base_url']}/api/tags")
+            resp.raise_for_status()
+            data = resp.json()
+        models_list = [m.get("name") for m in data.get("models", []) if m.get("name")]
+        return {"available": True, "models": models_list}
+    except Exception as e:
+        return {"available": False, "models": [], "error": str(e)[:200]}
 
 
 # =============================================================================
@@ -1409,22 +1507,38 @@ async def get_playthrough_data(playthrough_id: int, db: Session = Depends(get_db
 @router.get("/tester/prompt/{session_id}")
 async def get_prompt_window(session_id: int, db: Session = Depends(get_db)):
     """
-    Get the current prompt input that would be sent to the AI.
+    Get the full prompt that would be sent to the AI for story generation.
 
-    Shows exactly what the LLM sees when generating responses. Backs the
-    Tester panel's "Prompt" tab.
+    Returns the system prompt and the assembled user prompt (with a placeholder
+    for user input and empty character decisions, since no turn is in flight).
+    Backs the Tester panel's "Prompt" tab.
     """
     try:
         from ..ai.prompt_builder import PromptBuilder
+        from ..ai.prompts import PromptTemplates
+        from ..pipeline.chat_pipeline import STORY_SYSTEM_PROMPT
 
         # Validate session exists
         session = db.query(models.Session).filter(models.Session.id == session_id).first()
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # Build the prompt input (rendered string for display)
         prompt_builder = PromptBuilder(db, session_id)
-        full_prompt = prompt_builder.build_prompt_string()
+        bundle = prompt_builder.build_prompt_bundle()
+        story_info = prompt_builder.get_story_info()
+
+        # No active turn, so decisions and user input are placeholders.
+        story_prompt = PromptTemplates.story_generation_prompt(
+            bundle,
+            "[user input will appear here]",
+            [],
+            story_info,
+        )
+
+        full_prompt = (
+            f"=== SYSTEM PROMPT ===\n{STORY_SYSTEM_PROMPT}\n\n"
+            f"=== USER PROMPT ===\n{story_prompt}"
+        )
 
         # Get conversation history for this session
         conversations = db.query(models.Conversation).filter(

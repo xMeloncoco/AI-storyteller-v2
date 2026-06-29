@@ -211,7 +211,7 @@ JSON Response:"""
         try:
             response = await llm_manager.generate_text(
                 prompt,
-                model_size="small",
+                task="story_flag",
                 temperature=settings.story_flag_analysis_temperature,
             )
 

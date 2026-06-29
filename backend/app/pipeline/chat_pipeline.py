@@ -188,8 +188,7 @@ class ChatPipeline:
 
         generated_response = await self.llm_manager.generate_text(
             prompt,
-            model_size="large",
-            max_tokens=settings.generate_more_max_tokens,
+            task="generate_more",
             system_prompt=GENERATE_MORE_SYSTEM_PROMPT,
         )
 
@@ -413,12 +412,12 @@ class ChatPipeline:
         self.logger.ai_decision(
             "Sending prompt to AI for story generation...",
             "ai",
-            {"model_size": "large", "system_prompt_length": len(STORY_SYSTEM_PROMPT)},
+            {"task": "story_generation", "system_prompt_length": len(STORY_SYSTEM_PROMPT)},
         )
 
         generated_response = await self.llm_manager.generate_text(
             story_prompt,
-            model_size="large",
+            task="story_generation",
             system_prompt=STORY_SYSTEM_PROMPT,
         )
 

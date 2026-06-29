@@ -209,30 +209,11 @@ async function loadPlaythrough(playthroughId) {
  * Create a new playthrough for the current story
  */
 async function createNewPlaythrough() {
-    const nameInput = document.getElementById('new-playthrough-name');
-    const name = nameInput.value.trim();
-
-    if (!name) {
-        alert('Please enter a name for your playthrough.');
-        return;
-    }
-
-    if (!AppState.currentStory) {
-        alert('No story selected.');
-        return;
-    }
+    if (!AppState.currentStory) return;
 
     try {
-        // Create playthrough
-        const playthrough = await createPlaythrough(AppState.currentStory.id, name);
-
-        // Close modal
-        document.getElementById('modal-new-playthrough').classList.remove('active');
-        nameInput.value = '';
-
-        // Load the new playthrough
+        const playthrough = await createPlaythrough(AppState.currentStory.id);
         await loadPlaythrough(playthrough.id);
-
     } catch (error) {
         console.error('Error creating playthrough:', error);
         alert(`Error: ${error.message}`);
@@ -299,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showScreen('settings');
         SettingsComponent.loadSystemInfo();
         SettingsComponent.loadTestDataList();
+        SettingsComponent.loadModelConfig();
     });
 
     document.getElementById('btn-tester').addEventListener('click', () => {
@@ -317,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-new-playthrough').addEventListener('click', () => {
-        document.getElementById('modal-new-playthrough').classList.add('active');
+        createNewPlaythrough();
     });
 
     // Chat screen
@@ -387,6 +369,15 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('setting-api-url').addEventListener('change', (e) => {
         SettingsComponent.updateSetting('apiUrl', e.target.value);
         checkConnection();
+    });
+
+    // AI Models
+    document.getElementById('btn-test-models').addEventListener('click', () => {
+        SettingsComponent.runModelTest();
+    });
+
+    document.getElementById('btn-refresh-models').addEventListener('click', () => {
+        SettingsComponent.loadModelConfig();
     });
 
     // Test Data Management
@@ -469,14 +460,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modals
     document.getElementById('btn-close-characters').addEventListener('click', () => {
         document.getElementById('modal-characters').classList.remove('active');
-    });
-
-    document.getElementById('btn-close-new-playthrough').addEventListener('click', () => {
-        document.getElementById('modal-new-playthrough').classList.remove('active');
-    });
-
-    document.getElementById('btn-create-playthrough').addEventListener('click', () => {
-        createNewPlaythrough();
     });
 
     // Close modals when clicking outside

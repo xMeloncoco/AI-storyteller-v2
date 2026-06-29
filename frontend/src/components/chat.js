@@ -66,6 +66,9 @@ const ChatComponent = {
     addMessage(type, speaker, content) {
         const messagesContainer = document.getElementById('chat-messages');
 
+        // A real message always replaces the "narrator is typing" bubble if present.
+        this.removeTypingIndicator();
+
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${type}`;
 
@@ -184,13 +187,49 @@ const ChatComponent = {
             generateBtn.disabled = true;
             input.disabled = true;
             document.getElementById('footer-status').textContent = 'AI is thinking...';
+            this.showTypingIndicator();
         } else {
             sendBtn.disabled = false;
             sendBtn.textContent = 'Send';
             generateBtn.disabled = false;
             input.disabled = false;
             document.getElementById('footer-status').textContent = 'Ready';
+            this.removeTypingIndicator();
         }
+    },
+
+    /**
+     * Show a "narrator is typing" bubble (three bouncing dots) while the AI works.
+     */
+    showTypingIndicator() {
+        const messagesContainer = document.getElementById('chat-messages');
+        if (document.getElementById('typing-indicator')) return;
+
+        const wrap = document.createElement('div');
+        wrap.className = 'message narrator';
+        wrap.id = 'typing-indicator';
+
+        const header = document.createElement('div');
+        header.className = 'message-header';
+        header.textContent = 'Narrator';
+
+        const typing = document.createElement('div');
+        typing.className = 'chat-typing';
+        typing.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+
+        wrap.appendChild(header);
+        wrap.appendChild(typing);
+        messagesContainer.appendChild(wrap);
+
+        this.scrollToBottom();
+    },
+
+    /**
+     * Remove the typing bubble if it is currently shown.
+     */
+    removeTypingIndicator() {
+        const el = document.getElementById('typing-indicator');
+        if (el) el.remove();
     },
 
     /**

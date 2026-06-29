@@ -144,6 +144,21 @@
                         <div id="validation-mode-status" style="margin-top: 6px; font-size: 0.85em;"></div>
                     </div>
                     <div class="setting-group">
+                        <h3>AI Models</h3>
+                        <p>Assign a provider and model to each pipeline task. Analysis/validation
+                           tasks can run locally on Ollama while story text runs on a paid API like DeepSeek.
+                           API keys are configured in <code>backend/.env</code>.</p>
+                        <div id="model-config-list">
+                            <p class="loading">Loading model configuration…</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; align-items: center;">
+                            <button id="btn-test-models" class="secondary-btn">Test Models</button>
+                            <button id="btn-refresh-models" class="secondary-btn">Refresh</button>
+                            <span id="model-config-status" style="font-size: 0.85em;"></span>
+                        </div>
+                        <div id="model-test-results" style="margin-top: 10px;"></div>
+                    </div>
+                    <div class="setting-group">
                         <h3>Test Data Management</h3>
                         <p>Load test stories from <code>backend/test_data/</code> into the database.</p>
 
@@ -236,22 +251,6 @@
                 </div>
             </div>
 
-            <!-- New Playthrough Modal -->
-            <div id="modal-new-playthrough" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Start New Playthrough</h2>
-                        <button id="btn-close-new-playthrough" class="close-btn">X</button>
-                    </div>
-                    <div class="modal-body">
-                        <label>
-                            Playthrough Name:
-                            <input type="text" id="new-playthrough-name" placeholder="My Adventure">
-                        </label>
-                        <button id="btn-create-playthrough" class="primary-btn">Create</button>
-                    </div>
-                </div>
-            </div>
         </main>
 
         <!-- Footer -->

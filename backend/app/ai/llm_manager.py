@@ -1,30 +1,37 @@
 """
 LLM Manager - Handles communication with AI models
-Supports multiple providers: OpenRouter, Nebius, Local Ollama
+
+Provider + model are resolved *per task* via the model registry
+(ai/model_config.py), so different pipeline stages can run on different
+providers at the same time (e.g. analysis on local Ollama, story generation
+on paid DeepSeek). See BUILD_INSTRUCTIONS.md M12.2.
 
 This is the core AI interface that:
-1. Sends prompts to the AI
-2. Receives and parses responses
-3. Handles errors and retries
+1. Resolves each task's provider/model/token budget
+2. Sends prompts to the chosen provider
+3. Receives and parses responses
 4. Logs all AI interactions
 """
 import httpx
 import json
+import time
 from typing import Optional, Dict, Any
 from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..utils.logger import AppLogger
+from .model_config import model_registry, provider_connection
 
 
 class LLMManager:
     """
-    Manages all LLM (Large Language Model) interactions
+    Manages all LLM (Large Language Model) interactions.
 
-    Supports:
-    - OpenRouter API (multiple models)
-    - Nebius API
-    - Local Ollama (for offline use - future feature)
+    Provider and model are not fixed at construction — each call resolves them
+    from the task's assignment in the model registry. Supported provider types:
+    - OpenAI-compatible APIs (DeepSeek, OpenRouter, Nebius)
+    - Local Ollama
+    - Demo (mock responses, no network)
     """
 
     def __init__(self, db: Session, session_id: Optional[int] = None):
@@ -37,97 +44,77 @@ class LLMManager:
         """
         self.db = db
         self.logger = AppLogger(db, session_id)
-        self.provider = settings.ai_provider
-
-        # Set up API configuration based on provider
-        if self.provider == "openrouter":
-            self.api_key = settings.openrouter_api_key
-            self.base_url = settings.openrouter_base_url
-        elif self.provider == "nebius":
-            self.api_key = settings.nebius_api_key
-            self.base_url = settings.nebius_base_url
-        else:
-            # Local Ollama - future implementation
-            self.api_key = None
-            self.base_url = settings.ollama_host
-
-        self.logger.notification(
-            f"LLM Manager initialized with provider: {self.provider}",
-            "ai"
-        )
 
     async def generate_text(
         self,
         prompt: str,
-        model_size: str = "large",
+        task: str = "story_generation",
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        timeout: Optional[float] = None,
     ) -> str:
         """
-        Generate text using the configured LLM
+        Generate text using the provider/model assigned to ``task``.
 
         Args:
             prompt: The user/story prompt to send
-            model_size: "small" for quick analysis, "large" for story generation
-            max_tokens: Maximum tokens in response (uses defaults if None)
+            task: Pipeline task key (see ai/model_config.TASKS). Determines
+                  which provider and model are used.
+            max_tokens: Override the task's token budget (uses task default if None)
             temperature: Creativity level (0.0 = deterministic, 1.0 = creative)
             system_prompt: Optional system instructions for the AI
+            timeout: Optional per-request timeout override (seconds)
 
         Returns:
             Generated text from the AI
         """
-        # Select model based on size
-        if model_size == "small":
-            model = settings.small_model
-            default_tokens = settings.max_tokens_small
-        else:
-            model = settings.large_model
-            default_tokens = settings.max_tokens_large
-
+        cfg = model_registry.get_task(task)
+        provider = cfg["provider"]
+        model = cfg["model"]
         if max_tokens is None:
-            max_tokens = default_tokens
+            max_tokens = cfg["max_tokens"]
+
+        conn = provider_connection(provider)
 
         # Log the request
         self.logger.ai_decision(
-            f"Sending request to {model_size} model ({model})",
+            f"Sending {task} request to {provider} ({model})",
             "ai",
             {
+                "task": task,
+                "provider": provider,
                 "model": model,
                 "prompt_length": len(prompt),
                 "max_tokens": max_tokens,
-                "temperature": temperature
+                "temperature": temperature,
             }
         )
 
         try:
-            if self.provider == "openrouter":
-                response = await self._call_openrouter(
-                    model, prompt, max_tokens, temperature, system_prompt
+            ptype = conn["type"]
+            if ptype == "openai":
+                response = await self._call_openai_compatible(
+                    conn, provider, model, prompt, max_tokens, temperature,
+                    system_prompt, timeout,
                 )
-            elif self.provider == "nebius":
-                response = await self._call_nebius(
-                    model, prompt, max_tokens, temperature, system_prompt
-                )
-            elif self.provider == "local":
-                # Local Ollama
+            elif ptype == "ollama":
                 response = await self._call_ollama(
-                    model, prompt, max_tokens, temperature, system_prompt
+                    conn, model, prompt, max_tokens, temperature,
+                    system_prompt, timeout,
                 )
-            elif self.provider == "demo":
-                # Demo mode - returns mock responses for testing without API
-                response = await self._generate_demo_response(prompt, model_size)
+            elif ptype == "demo":
+                response = await self._generate_demo_response(prompt, task)
             else:
-                # Unknown provider
                 self.logger.error(
-                    f"Unknown provider: {self.provider}",
-                    "ai"
+                    f"Unknown provider '{provider}' for task '{task}'",
+                    "ai",
                 )
-                response = f"Error: Unknown provider {self.provider}"
+                raise Exception(f"Unknown provider '{provider}' for task '{task}'")
 
             # Log successful response
             self.logger.notification(
-                f"Received response from {model_size} model",
+                f"Received response for {task} from {provider}",
                 "ai",
                 {"response_length": len(response)}
             )
@@ -138,194 +125,117 @@ class LLMManager:
             self.logger.error(
                 f"Error generating text: {str(e)}",
                 "ai",
-                {"model": model, "error": str(e)}
+                {"task": task, "provider": provider, "model": model, "error": str(e)}
             )
             raise
 
-    async def _call_openrouter(
+    async def _call_openai_compatible(
         self,
+        conn: Dict[str, Any],
+        provider: str,
         model: str,
         prompt: str,
         max_tokens: int,
         temperature: float,
-        system_prompt: Optional[str]
+        system_prompt: Optional[str],
+        timeout: Optional[float] = None,
     ) -> str:
         """
-        Call OpenRouter API
+        Call any OpenAI-compatible /chat/completions endpoint.
 
-        OpenRouter provides access to multiple AI models through a single API
+        DeepSeek, OpenRouter, and Nebius all share this wire format; they differ
+        only in base_url and API key, which come from ``conn``.
         """
-        if not self.api_key:
-            raise ValueError("OpenRouter API key not configured")
+        if not conn.get("api_key"):
+            raise ValueError(f"{provider} API key not configured (set it in .env)")
 
         # Build messages array
         messages = []
-
         if system_prompt:
-            messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
 
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
-
-        # Prepare request payload
         payload = {
             "model": model,
             "messages": messages,
             "max_tokens": max_tokens,
-            "temperature": temperature
+            "temperature": temperature,
         }
 
-        # Set headers
+        # OpenRouter wants these; they're harmless for the other providers.
         headers = {
-            "Authorization": f"Bearer {self.api_key}",
+            "Authorization": f"Bearer {conn['api_key']}",
             "Content-Type": "application/json",
-            "HTTP-Referer": "http://localhost:8000",  # Required by OpenRouter
-            "X-Title": "Dreamwalkers"
+            "HTTP-Referer": "http://localhost:8000",
+            "X-Title": "Dreamwalkers",
         }
 
-        # Make the API call
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=timeout or 60.0) as client:
             response = await client.post(
-                f"{self.base_url}/chat/completions",
+                f"{conn['base_url']}/chat/completions",
                 json=payload,
-                headers=headers
+                headers=headers,
             )
 
             if response.status_code != 200:
                 error_detail = response.text
                 self.logger.error(
-                    f"OpenRouter API error: {response.status_code}",
+                    f"{provider} API error: {response.status_code}",
                     "ai",
                     {"status": response.status_code, "detail": error_detail}
                 )
-                raise Exception(f"API error {response.status_code}: {error_detail}")
+                raise Exception(f"{provider} error {response.status_code}: {error_detail}")
 
             result = response.json()
-
-            # Extract the generated text
             if "choices" in result and len(result["choices"]) > 0:
                 return result["choices"][0]["message"]["content"]
-            else:
-                raise Exception("Invalid response format from OpenRouter")
-
-    async def _call_nebius(
-        self,
-        model: str,
-        prompt: str,
-        max_tokens: int,
-        temperature: float,
-        system_prompt: Optional[str]
-    ) -> str:
-        """
-        Call Nebius API
-
-        Nebius provides similar interface to OpenRouter
-        """
-        if not self.api_key:
-            raise ValueError("Nebius API key not configured")
-
-        # Build messages array
-        messages = []
-
-        if system_prompt:
-            messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
-
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
-
-        # Prepare request payload
-        payload = {
-            "model": model,
-            "messages": messages,
-            "max_tokens": max_tokens,
-            "temperature": temperature
-        }
-
-        # Set headers
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-
-        # Make the API call
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{self.base_url}/chat/completions",
-                json=payload,
-                headers=headers
-            )
-
-            if response.status_code != 200:
-                error_detail = response.text
-                self.logger.error(
-                    f"Nebius API error: {response.status_code}",
-                    "ai",
-                    {"status": response.status_code, "detail": error_detail}
-                )
-                raise Exception(f"API error {response.status_code}: {error_detail}")
-
-            result = response.json()
-
-            # Extract the generated text
-            if "choices" in result and len(result["choices"]) > 0:
-                return result["choices"][0]["message"]["content"]
-            else:
-                raise Exception("Invalid response format from Nebius")
+            raise Exception(f"Invalid response format from {provider}")
 
     async def _call_ollama(
         self,
+        conn: Dict[str, Any],
         model: str,
         prompt: str,
         max_tokens: int,
         temperature: float,
-        system_prompt: Optional[str]
+        system_prompt: Optional[str],
+        timeout: Optional[float] = None,
     ) -> str:
         """
         Call local Ollama API
 
-        Ollama provides a local LLM server with OpenAI-compatible API
-        No API key needed, works offline!
+        Ollama provides a local LLM server. No API key needed, works offline.
         """
+        base_url = conn["base_url"]
+
         # Build messages array
         messages = []
-
         if system_prompt:
-            messages.append({
-                "role": "system",
-                "content": system_prompt
-            })
-
-        messages.append({
-            "role": "user",
-            "content": prompt
-        })
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
 
         # Prepare request payload (Ollama uses similar format to OpenAI)
+        options = {
+            "num_predict": max_tokens,
+            "temperature": temperature,
+        }
+        # Force CPU (num_gpu=0) or a specific GPU layer count when configured.
+        # Needed for old GPUs that crash on GPU offload (see config.ollama_num_gpu).
+        if settings.ollama_num_gpu is not None:
+            options["num_gpu"] = settings.ollama_num_gpu
+
         payload = {
             "model": model,
             "messages": messages,
-            "options": {
-                "num_predict": max_tokens,
-                "temperature": temperature
-            },
+            "options": options,
             "stream": False
         }
 
         # Make the API call (no auth needed for local Ollama)
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:  # Longer timeout for local generation
+            async with httpx.AsyncClient(timeout=timeout or 120.0) as client:  # Longer timeout for local generation
                 response = await client.post(
-                    f"{self.base_url}/api/chat",
+                    f"{base_url}/api/chat",
                     json=payload
                 )
 
@@ -349,7 +259,7 @@ class LLMManager:
             self.logger.error(
                 "Cannot connect to Ollama. Is it running?",
                 "ai",
-                {"base_url": self.base_url}
+                {"base_url": base_url}
             )
             raise Exception(
                 "Cannot connect to Ollama. Make sure Ollama is installed and running. "
@@ -395,7 +305,7 @@ class LLMManager:
 
         response = await self.generate_text(
             prompt,
-            model_size="small",  # Use small model for quick analysis
+            task="character_decision",
             temperature=0.5  # More deterministic for character consistency
         )
 
@@ -490,7 +400,7 @@ class LLMManager:
 
         response = await self.generate_text(
             prompt,
-            model_size="small",
+            task="scene_detection",
             temperature=0.3  # Very deterministic for detection
         )
 
@@ -530,14 +440,14 @@ class LLMManager:
 
         return changes
 
-    async def _generate_demo_response(self, prompt: str, model_size: str) -> str:
+    async def _generate_demo_response(self, prompt: str, task: str) -> str:
         """
         Generate demo/mock responses for testing without an API key
 
         This allows testing the full application flow without incurring API costs
         """
         self.logger.notification(
-            f"Generating demo response (model_size: {model_size})",
+            f"Generating demo response (task: {task})",
             "ai"
         )
 
@@ -581,8 +491,8 @@ class LLMManager:
                 "flags": []
             })
 
-        # Story generation (default for large model)
-        if model_size == "large" or "write the next part" in prompt_lower:
+        # Story generation (narrative tasks)
+        if task in ("story_generation", "generate_more") or "write the next part" in prompt_lower:
             return self._generate_demo_story()
 
         # Default response
@@ -630,3 +540,43 @@ The evening breeze carries the scent of rain, and you realize that whatever you 
         ]
 
         return random.choice(responses)
+
+
+async def probe_task(db: Session, task: str, timeout: float = 15.0) -> Dict[str, Any]:
+    """
+    Fire a tiny prompt at a task's assigned provider/model to check it works.
+
+    Used by the settings "Test Models" button. Returns a result dict with
+    ok/latency/error so the UI can show per-task health without running a full
+    turn. Uses a short timeout so a dead provider fails fast.
+    """
+    cfg = model_registry.get_task(task)
+    manager = LLMManager(db)
+    start = time.perf_counter()
+    try:
+        text = await manager.generate_text(
+            "Reply with the single word: OK",
+            task=task,
+            max_tokens=16,
+            temperature=0.0,
+            timeout=timeout,
+        )
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return {
+            "ok": bool(text and text.strip()),
+            "provider": cfg["provider"],
+            "model": cfg["model"],
+            "latency_ms": latency_ms,
+            "sample": (text or "").strip()[:80],
+            "error": None,
+        }
+    except Exception as e:
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        return {
+            "ok": False,
+            "provider": cfg["provider"],
+            "model": cfg["model"],
+            "latency_ms": latency_ms,
+            "sample": None,
+            "error": str(e)[:300],
+        }

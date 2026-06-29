@@ -215,7 +215,7 @@ Story response excerpt: {ai_response[:500]}...
         try:
             response = await llm_manager.generate_text(
                 prompt,
-                model_size="small",
+                task="relationship_update",
                 temperature=settings.relationship_update_temperature,
             )
 

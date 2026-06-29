@@ -40,8 +40,25 @@ class Settings(BaseSettings):
     nebius_api_key: Optional[str] = None
     nebius_base_url: str = "https://api.studio.nebius.ai/v1"
 
+    # DeepSeek Settings (paid, OpenAI-compatible API — good for generation)
+    # Get API key from https://platform.deepseek.com/
+    deepseek_api_key: Optional[str] = None
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
+
     # Local Ollama Settings (for future offline support)
     ollama_host: str = "http://localhost:11434"
+
+    # Number of model layers Ollama offloads to the GPU.
+    #   None  -> let Ollama decide (default; uses GPU when it can)
+    #   0     -> force CPU-only (use on old GPUs that crash on GPU offload,
+    #            e.g. a Maxwell GTX 960 hitting "unsupported PTX toolchain")
+    ollama_num_gpu: Optional[int] = None
+
+    # Where per-task model assignments are persisted (see ai/model_config.py).
+    # Kept alongside the SQLite DB in ./data/. API keys are NOT written here —
+    # they stay in this Settings object / .env. (Named ai_* to avoid pydantic's
+    # protected `model_` field namespace.)
+    ai_model_config_path: str = "./data/model_config.json"
 
     # Model Configuration
     # For LOCAL (Ollama) - recommended for reliability:

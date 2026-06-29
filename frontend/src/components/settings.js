@@ -107,6 +107,155 @@ const SettingsComponent = {
         }
     },
 
+    // ----- AI model configuration -----
+
+    _modelProviders: {},
+    _ollamaTags: [],
+
+    /**
+     * Load per-task model assignments and render the editor.
+     */
+    async loadModelConfig() {
+        const container = document.getElementById('model-config-list');
+        const status = document.getElementById('model-config-status');
+        status.textContent = '';
+        container.innerHTML = '<p class="loading">Loading model configuration…</p>';
+
+        try {
+            const data = await getModelConfig();
+            this._modelProviders = data.providers || {};
+
+            // Best-effort: fetch local Ollama models for input suggestions.
+            try {
+                const tags = await getOllamaTags();
+                this._ollamaTags = tags.available ? (tags.models || []) : [];
+            } catch (e) {
+                this._ollamaTags = [];
+            }
+
+            this.renderModelConfig(data.tasks || []);
+        } catch (error) {
+            container.innerHTML = `<p style="color: #ef4444;">Could not load model config: ${error.message}</p>`;
+        }
+    },
+
+    renderModelConfig(tasks) {
+        const container = document.getElementById('model-config-list');
+        const providerNames = Object.keys(this._modelProviders);
+
+        const datalistId = 'ollama-model-suggestions';
+        const datalistOpts = this._ollamaTags.map(t => `<option value="${t}"></option>`).join('');
+
+        let html = `<datalist id="${datalistId}">${datalistOpts}</datalist>`;
+        html += '<table class="model-config-table" style="width:100%; border-collapse: collapse;">';
+        html += `<thead><tr style="text-align:left; font-size:0.8em; color:#9ca3af;">
+            <th style="padding:4px 6px;">Task</th>
+            <th style="padding:4px 6px;">Provider</th>
+            <th style="padding:4px 6px;">Model</th>
+            <th style="padding:4px 6px;">Max tokens</th>
+        </tr></thead><tbody>`;
+
+        for (const t of tasks) {
+            const providerOpts = providerNames.map(name => {
+                const p = this._modelProviders[name];
+                const label = p.available ? name : `${name} (no key)`;
+                const sel = name === t.provider ? ' selected' : '';
+                return `<option value="${name}"${sel}>${label}</option>`;
+            }).join('');
+
+            html += `<tr data-task="${t.task}" style="border-top:1px solid #2a2a2a;">
+                <td style="padding:6px;">${t.label}</td>
+                <td style="padding:6px;">
+                    <select class="model-provider" data-task="${t.task}">${providerOpts}</select>
+                </td>
+                <td style="padding:6px;">
+                    <input type="text" class="model-name" data-task="${t.task}"
+                           value="${t.model || ''}" list="${datalistId}" style="min-width:180px;">
+                </td>
+                <td style="padding:6px;">
+                    <input type="number" class="model-maxtokens" data-task="${t.task}"
+                           value="${t.max_tokens || ''}" min="1" style="width:90px;">
+                </td>
+                <td style="padding:6px; font-size:0.8em;"><span class="model-row-status" data-task="${t.task}"></span></td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+
+        // Wire change handlers.
+        container.querySelectorAll('.model-provider').forEach(el => {
+            el.addEventListener('change', (e) => {
+                this.saveTaskModel(e.target.dataset.task, { provider: e.target.value });
+            });
+        });
+        container.querySelectorAll('.model-name').forEach(el => {
+            el.addEventListener('change', (e) => {
+                this.saveTaskModel(e.target.dataset.task, { model: e.target.value.trim() });
+            });
+        });
+        container.querySelectorAll('.model-maxtokens').forEach(el => {
+            el.addEventListener('change', (e) => {
+                const v = parseInt(e.target.value, 10);
+                if (Number.isFinite(v) && v > 0) {
+                    this.saveTaskModel(e.target.dataset.task, { maxTokens: v });
+                }
+            });
+        });
+    },
+
+    async saveTaskModel(task, change) {
+        const statusEl = document.querySelector(`.model-row-status[data-task="${task}"]`);
+        if (statusEl) {
+            statusEl.style.color = '#9ca3af';
+            statusEl.textContent = 'Saving…';
+        }
+        try {
+            await setTaskModel(task, change);
+            if (statusEl) {
+                statusEl.style.color = '#10b981';
+                statusEl.textContent = 'Saved';
+                setTimeout(() => { statusEl.textContent = ''; }, 2000);
+            }
+        } catch (error) {
+            if (statusEl) {
+                statusEl.style.color = '#ef4444';
+                statusEl.textContent = `Error: ${error.message}`;
+            }
+        }
+    },
+
+    async runModelTest() {
+        const btn = document.getElementById('btn-test-models');
+        const results = document.getElementById('model-test-results');
+        btn.disabled = true;
+        btn.textContent = 'Testing…';
+        results.innerHTML = '<p style="color:#3b82f6;">Pinging each model…</p>';
+
+        try {
+            const data = await testModels();
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:0.85em;"><tbody>';
+            for (const [task, r] of Object.entries(data.results)) {
+                const icon = r.ok ? '✅' : '❌';
+                const color = r.ok ? '#10b981' : '#ef4444';
+                const detail = r.ok
+                    ? `${r.latency_ms} ms`
+                    : (r.error || 'failed');
+                html += `<tr style="border-top:1px solid #2a2a2a;">
+                    <td style="padding:5px 6px;">${icon} ${r.label}</td>
+                    <td style="padding:5px 6px; color:#9ca3af;">${r.provider}/${r.model}</td>
+                    <td style="padding:5px 6px; color:${color};">${detail}</td>
+                </tr>`;
+            }
+            html += '</tbody></table>';
+            results.innerHTML = html;
+        } catch (error) {
+            results.innerHTML = `<p style="color:#ef4444;">Test failed: ${error.message}</p>`;
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Test Models';
+        }
+    },
+
     /**
      * Load and display system information
      */

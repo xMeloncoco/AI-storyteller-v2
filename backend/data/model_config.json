@@ -1,0 +1,34 @@
+{
+  "tasks": {
+    "story_generation": {
+      "provider": "deepseek",
+      "model": "deepseek-chat",
+      "max_tokens": 3000
+    },
+    "generate_more": {
+      "provider": "deepseek",
+      "model": "deepseek-chat",
+      "max_tokens": 1000
+    },
+    "scene_detection": {
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "max_tokens": 500
+    },
+    "character_decision": {
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "max_tokens": 500
+    },
+    "relationship_update": {
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "max_tokens": 500
+    },
+    "story_flag": {
+      "provider": "ollama",
+      "model": "llama3.2:3b",
+      "max_tokens": 500
+    }
+  }
+}
