@@ -39,8 +39,14 @@ async function apiRequest(endpoint, options = {}) {
 
     console.log(`API Request: ${fetchOptions.method || 'GET'} ${url}`);
 
+    // Abort the request if it runs past the configured timeout. Without this,
+    // a hung backend leaves the fetch pending forever — and callers like the
+    // chat component keep their input disabled in a finally that never runs.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+
     try {
-        const response = await fetch(url, fetchOptions);
+        const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -52,8 +58,16 @@ async function apiRequest(endpoint, options = {}) {
         return data;
 
     } catch (error) {
+        if (error.name === 'AbortError') {
+            const seconds = Math.round(API_CONFIG.timeout / 1000);
+            const timeoutError = new Error(`Request timed out after ${seconds}s. The backend may be slow or unresponsive.`);
+            console.error(`API Error: ${timeoutError.message}`);
+            throw timeoutError;
+        }
         console.error(`API Error: ${error.message}`);
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
@@ -443,7 +457,7 @@ async function resetPlaythrough(playthroughId) {
  * @param {number} limit - Number of logs to retrieve
  * @returns {Promise<Object>} Grouped logs
  */
-async function getGroupedLogs(sessionId, limit = 50) {
+async function getGroupedLogs(sessionId, limit = 1000) {
     return apiRequest(`/admin/tester/logs/${sessionId}?limit=${limit}`);
 }
 

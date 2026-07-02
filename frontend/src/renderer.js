@@ -38,6 +38,13 @@ function showScreen(screenId) {
     } else {
         console.error(`Screen not found: ${screenId}`);
     }
+
+    // The Tester is only relevant while a chat is open, so only surface its
+    // button on the chat screen.
+    const testerBtn = document.getElementById('btn-tester');
+    if (testerBtn) {
+        testerBtn.style.display = screenId === 'chat' ? '' : 'none';
+    }
 }
 
 // =============================================================================
@@ -271,11 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(checkConnection, 30000); // Every 30 seconds
 
     // Header buttons
-    document.getElementById('btn-logs').addEventListener('click', () => {
-        showScreen('logs');
-        LogsComponent.loadLogs();
-    });
-
     document.getElementById('btn-settings').addEventListener('click', () => {
         showScreen('settings');
         SettingsComponent.loadSystemInfo();
@@ -284,12 +286,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('btn-tester').addEventListener('click', () => {
-        // Need an active playthrough to use tester
+        // The button is only visible on the chat screen, so a playthrough is
+        // always active here, but guard anyway.
         if (AppState.currentPlaythrough) {
             showScreen('tester');
             TesterComponent.init(AppState.currentPlaythrough.id, AppState.currentSession?.id);
-        } else {
-            alert('Please select a playthrough first before using the Tester.');
         }
     });
 
@@ -425,6 +426,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('btn-tester-logs').addEventListener('click', () => {
         TesterComponent.showView('logs');
+    });
+
+    document.getElementById('btn-tester-dbchanges').addEventListener('click', () => {
+        TesterComponent.showView('dbchanges');
     });
 
     document.getElementById('btn-tester-characters').addEventListener('click', () => {

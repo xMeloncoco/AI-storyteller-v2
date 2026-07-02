@@ -27,7 +27,7 @@ def load_story_from_json(db, json_path: str):
     """Load a complete story from a JSON file"""
     print(f"\nLoading story from: {json_path}")
 
-    with open(json_path, 'r') as f:
+    with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     # Check if story already exists

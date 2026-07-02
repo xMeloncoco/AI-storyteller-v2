@@ -166,6 +166,7 @@ See `REFACTOR_FIRST.md` for the full reasoning. These exist to make every later 
 - [ ] **M1.3** Backend INTAKE stage parses raw input into `IntakeMessage`. Small‑model fallback parser for ambiguous input.
 - [ ] **M1.4** Persist the parsed fields on `Conversation` rows (add columns `speech`, `action`, `thought`). Backfill existing rows with `speech = message`.
 - [ ] **M1.5** Validator rule: if generated text contains the user character's name as a speaker (`Name:`, `Name said`), **regenerate**, do not just warn.
+  - 2026-06-30: detection down-payment — widened `validator._check_user_character_control` to also catch present-tense and comma'd dialogue attribution and a broader speech-verb set (`say/says/whisper/mutter/reply/answer/tell/…`), and `re.escape`'d the user name (was a latent crash on names with regex metachars). Still **quote-anchored** on purpose: arbitrary action-control (`you leave the room`) can't be told apart from valid 2nd-person narration (`you watch him leave`) by regex — that's M3.2's critic. The **regenerate** half of this box only fires under `VALIDATION_MODE=repair` today; wiring it to always-regenerate (independent of mode) is the rest of M1.5. Verified with 10 unit cases (3 newly-caught, 4 false-positive guards). Box left open.
 - [ ] **M1.6** When assembling the prompt input for an NPC, **exclude all user `thought` content**. Add a log line showing what was excluded.
 
 ---

@@ -81,6 +81,9 @@ const TesterComponent = {
             case 'logs':
                 await this.loadLogsView();
                 break;
+            case 'dbchanges':
+                await this.loadDbChangesView();
+                break;
             case 'characters':
             case 'relationships':
             case 'locations':
@@ -487,6 +490,77 @@ const TesterComponent = {
             this._activeStageFilter = e.target.value;
             this.renderLogsView();
         });
+    },
+
+    /**
+     * Load the "DB Changes" view - shows only the database edits made on each
+     * turn. Reuses the grouped-logs endpoint and filters to edit-type entries,
+     * so the user can see exactly what the turn wrote to the database.
+     */
+    async loadDbChangesView() {
+        const container = document.getElementById('tester-view-container');
+
+        if (!this.currentSession) {
+            container.innerHTML = `
+                <p style="color: #fbbf24;">No active session. Start a chat to see database changes.</p>
+            `;
+            return;
+        }
+
+        container.innerHTML = '<p>Loading database changes...</p>';
+
+        try {
+            const data = await getGroupedLogs(this.currentSession);
+
+            let html = '<div class="tester-logs-container">';
+            html += `<h4>Database Changes by Turn</h4>`;
+
+            let totalEdits = 0;
+
+            if (data.grouped_logs && data.grouped_logs.length > 0) {
+                for (const group of data.grouped_logs) {
+                    const edits = (group.logs || []).filter(log => log.type === 'edit');
+                    if (edits.length === 0) continue;
+                    totalEdits += edits.length;
+
+                    html += `<div class="log-group">`;
+                    html += `<div class="log-group-header">`;
+                    html += `<strong>User:</strong> ${group.user_message.substring(0, 100)}${group.user_message.length > 100 ? '...' : ''}`;
+                    html += ` <span style="color: #9ca3af;">(${edits.length} change${edits.length === 1 ? '' : 's'})</span>`;
+                    html += `</div>`;
+
+                    html += `<div class="log-entries">`;
+                    for (const log of edits) {
+                        const categoryColor = this.getLogCategoryColor(log.category);
+                        const parsed = this.parseLogDetails(log.details);
+                        html += `<div class="log-entry">`;
+                        html += `<span class="log-category" style="background-color: ${categoryColor};">${log.category}</span>`;
+                        html += `<span class="log-message">${log.message}</span>`;
+                        if (log.details) {
+                            const detailsText = parsed
+                                ? JSON.stringify(parsed, null, 2)
+                                : log.details;
+                            html += `<pre class="log-details">${detailsText}</pre>`;
+                        }
+                        html += `</div>`;
+                    }
+                    html += `</div>`;
+                    html += `</div>`;
+                }
+            }
+
+            if (totalEdits === 0) {
+                html += '<p style="color: #9ca3af;">No database changes recorded for this session yet.</p>';
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+
+        } catch (error) {
+            const errorMsg = error.message || error.toString() || 'Unknown error occurred';
+            console.error('Error loading database changes:', error);
+            container.innerHTML = `<p style="color: #ef4444;">Error loading database changes: ${errorMsg}</p>`;
+        }
     },
 
     /**

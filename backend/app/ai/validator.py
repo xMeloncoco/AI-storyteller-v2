@@ -120,15 +120,30 @@ class ContentValidator:
         if not user_char:
             return issues
 
-        user_name = user_char.character_name
+        # re.escape so a character name containing regex metacharacters
+        # (e.g. "J.D.", "Mr. O'Brien") can't break or distort the pattern.
+        user_name = re.escape(user_char.character_name)
 
-        # Check for dialogue attributed to user character
-        # Pattern: "Character Name: dialogue" or quotation after character name
+        # Speech verbs that, when attributed to the user's character and
+        # followed by a quote, mean the model wrote the user's dialogue.
+        # Present tense ("say") matters as much as past ("said") — the story
+        # is narrated in second person, so "you say \"...\"" is a real
+        # violation the old past-tense-only list missed.
+        speech_verbs = (
+            r'say|says|said|reply|replies|replied|ask|asks|asked|'
+            r'whisper|whispers|whispered|mutter|mutters|muttered|'
+            r'murmur|murmurs|murmured|answer|answers|answered|'
+            r'add|adds|added|tell|tells|told|shout|shouts|shouted|'
+            r'call|calls|called|respond|responds|responded|'
+            r'continue|continues|continued'
+        )
+
+        # Both patterns require an opening quote so we only flag attributed
+        # dialogue — not ordinary second-person narration ("Sam looks at you").
+        # The [\s,:]+ before the quote allows "you say, \"...\"" / "you say: \"...\"".
         user_dialogue_patterns = [
-            rf'{user_name}\s*:\s*["\']',  # "Name: 'dialogue'"
-            rf'{user_name}\s+said\s+["\']',  # "Name said 'dialogue'"
-            rf'{user_name}\s+replied\s+["\']',  # "Name replied 'dialogue'"
-            rf'{user_name}\s+asked\s+["\']',  # "Name asked 'dialogue'"
+            rf'{user_name}\s*:\s*["\']',  # script form: "Name: 'dialogue'"
+            rf'{user_name}\s+(?:{speech_verbs})[\s,:]+["\']',  # "Name says, 'dialogue'"
         ]
 
         for pattern in user_dialogue_patterns:

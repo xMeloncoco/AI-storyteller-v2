@@ -176,7 +176,7 @@ async def get_available_test_data():
                 continue
 
             try:
-                with open(json_file, 'r') as f:
+                with open(json_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
 
                 json_files.append({
@@ -336,7 +336,7 @@ def load_story_from_json(db: Session, json_path: str) -> int:
 
     Returns the story ID
     """
-    with open(json_path, 'r') as f:
+    with open(json_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     # Check if story already exists
@@ -1636,7 +1636,7 @@ async def reset_playthrough(playthrough_id: int, db: Session = Depends(get_db)):
 async def get_session_logs_grouped(
     session_id: int,
     db: Session = Depends(get_db),
-    limit: int = 50
+    limit: int = 1000
 ):
     """
     Get logs for a session, grouped by conversation turn
@@ -1654,10 +1654,14 @@ async def get_session_logs_grouped(
             models.Conversation.session_id == session_id
         ).order_by(models.Conversation.timestamp).all()
 
-        # Get all logs for this session
+        # Get the most recent `limit` logs for this session. We order DESC so a
+        # long session keeps the latest turns (a single turn emits many logs, so
+        # an ASC limit would only ever show the first turn), then reverse back to
+        # chronological order for the turn-grouping below.
         logs = db.query(models.Log).filter(
             models.Log.session_id == session_id
-        ).order_by(models.Log.timestamp).limit(limit).all()
+        ).order_by(models.Log.timestamp.desc()).limit(limit).all()
+        logs = list(reversed(logs))
 
         # Group logs by conversation turn
         grouped_logs = []
