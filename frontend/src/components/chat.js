@@ -33,18 +33,17 @@ const ChatComponent = {
         const messagesContainer = document.getElementById('chat-messages');
         messagesContainer.innerHTML = '';
 
-        // If no history, show initial story message
-        if (history.length === 0) {
-            // Get the story to show initial message
-            const story = await getStory(playthrough.story_id);
-            if (story && story.initial_message) {
-                this.addMessage('narrator', 'Narrator', story.initial_message);
-            }
-        } else {
-            // Load existing history
-            for (const msg of history) {
-                this.addMessage(msg.speaker_type, msg.speaker_name || msg.speaker_type, msg.message);
-            }
+        // The story's initial message is the opening narration. It is not stored
+        // as a conversation row, so it must be shown on every load (not only when
+        // history is empty) — otherwise it vanishes after the first user turn.
+        const story = await getStory(playthrough.story_id);
+        if (story && story.initial_message) {
+            this.addMessage('narrator', 'Narrator', story.initial_message);
+        }
+
+        // Load existing history beneath the opening narration
+        for (const msg of history) {
+            this.addMessage(msg.speaker_type, msg.speaker_name || msg.speaker_type, msg.message);
         }
 
         // Scroll to bottom

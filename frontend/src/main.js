@@ -10,9 +10,24 @@ const path = require('path');
 // Keep a global reference of the window object
 let mainWindow;
 
-// Disable hardware acceleration to prevent GPU crashes on Windows
-// This fixes the "GPU process exited unexpectedly" error
-app.disableHardwareAcceleration();
+// GPU stability vs. input focus trade-off (Windows):
+//
+// We previously called app.disableHardwareAcceleration() to stop the
+// "GPU process exited unexpectedly" crash. But on Windows that forces
+// software compositing, which triggers a Chromium bug where <input>/
+// <textarea> fields intermittently stop accepting focus/typing (you click
+// and nothing happens). It affects every text field in the app.
+//
+// Instead, keep hardware acceleration ON but route GPU work through ANGLE's
+// software GL backend. That avoids the GPU-process crash on flaky drivers
+// without dropping to the full software-compositing path that breaks inputs.
+// If a machine still crashes, set DREAMWALKERS_DISABLE_GPU=1 to fall back to
+// the old behavior.
+if (process.env.DREAMWALKERS_DISABLE_GPU === '1') {
+    app.disableHardwareAcceleration();
+} else {
+    app.commandLine.appendSwitch('use-angle', 'swiftshader');
+}
 
 function createWindow() {
     // Create the browser window
